@@ -1,0 +1,3549 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Management</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .flashing-dash {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        .address-validation-message {
+            font-size: 12px;
+            margin-top: 4px;
+            min-height: 16px;
+        }
+
+        .address-validation-message.invalid {
+            color: #e74c3c;
+        }
+
+        .address-validation-message.valid {
+            color: #2ecc71;
+        }
+
+        /* ROULETTE UI STYLES */
+        /* HEADER (The Ceiling) */
+        #ledger-header {
+            position: fixed;
+            top: 10px;
+            /* Moved up slightly */
+            left: 0;
+            width: 100%;
+            padding-top: 5px;
+            z-index: 1020;
+            /* Always on top */
+            text-align: center;
+            pointer-events: none;
+            /* Let clicks pass */
+        }
+
+        #ledger-header h3 {
+            font-family: 'Segoe UI', sans-serif !important;
+            font-size: 3.5rem;
+            color: white;
+            font-weight: 700;
+            /* Match input bold */
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            /* Soft shadow */
+        }
+
+        /* ROULETTE UI (The Heart) */
+        #roulette-center {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 300px;
+            z-index: 5;
+            /* Below sheets */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .roulette-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 500px;
+            pointer-events: none;
+            /* Container is transparent to clicks */
+        }
+
+        .roulette-client {
+            position: absolute;
+            left: 0;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            width: 100%;
+            font-family: 'Segoe UI', sans-serif !important;
+            font-weight: 700;
+            /* Match input bold */
+            text-transform: uppercase;
+            text-align: center;
+
+            /* Flex layout for side labels */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Vertical centering */
+            gap: 30px;
+            /* Space between labels and name */
+            pointer-events: auto;
+            /* Re-enable clicks for cycling */
+        }
+
+        /* Client Name Spacing */
+        .client-name {
+            margin: 0 20px;
+            /* 20px spacing on each side */
+        }
+
+        /* Side Labels (Service & Amount) */
+        .client-label {
+            font-size: 0.35em;
+            /* 35% of parent size */
+            opacity: 0.9;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            /* Soft shadow */
+            pointer-events: auto;
+            /* Ensure labels are clickable */
+        }
+
+        .client-label:hover {
+            opacity: 0.7;
+        }
+
+        /* Hide labels for faded/exiting clients */
+        .roulette-client.faded .client-label,
+        .roulette-client.exiting .client-label {
+            display: none;
+        }
+
+        /* Flash Animation for Service Click */
+        @keyframes flashActive {
+            0% {
+                transform: scale(1);
+                text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+                color: white;
+            }
+
+            50% {
+                transform: scale(1.2);
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+                color: #fff;
+            }
+
+            100% {
+                transform: scale(1);
+                text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+                color: white;
+            }
+        }
+
+        .flash-active {
+            animation: flashActive 0.3s ease-out forwards;
+        }
+
+        /* Pulse Success Animation for Bulk Action */
+        @keyframes pulseSuccess {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+            }
+        }
+
+        .pulse-success {
+            animation: pulseSuccess 0.6s ease-out forwards;
+        }
+
+        /* Active styling: Big, Bright, Center, Soft Shadow */
+        .roulette-client.active {
+            font-size: 5rem;
+            color: white;
+            opacity: 1;
+            transform: scale(1.2);
+            /* Raised effect */
+            z-index: 10;
+            animation: riseUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+
+            /* Soft Drop Shadow (No more 3D block) */
+            text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Faded styling: Smaller, Below, Transparent, No Shadow */
+        .roulette-client.faded {
+            font-size: 3rem;
+            color: white;
+            opacity: 0.3;
+            transform: translateY(100px) scale(0.9);
+            /* Positioned below */
+            text-shadow: none;
+            /* No shadow */
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Exiting animation styling: Moves DOWN and fades out */
+        .roulette-client.exiting {
+            opacity: 0;
+            transform: translateY(150px) scale(0.8);
+            /* Moves further down */
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        /* Animation for rising up from faded position */
+        @keyframes riseUp {
+            from {
+                opacity: 0.3;
+                transform: translateY(100px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1.2);
+            }
+        }
+
+        /* CLOUD ANIMATION LAYER */
+        .clouds-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+            opacity: 0.6;
+        }
+
+        /* Cloud 1 */
+        .clouds-layer::before {
+            content: "";
+            position: absolute;
+            top: 15%;
+            left: -20%;
+            width: 300px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            filter: blur(20px);
+            animation: driftCloud 60s linear infinite;
+        }
+
+        /* Cloud 2 */
+        .clouds-layer::after {
+            content: "";
+            position: absolute;
+            bottom: 25%;
+            left: -300px;
+            width: 400px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            filter: blur(30px);
+            animation: driftCloud 80s linear infinite;
+            animation-delay: -30s;
+        }
+
+        @keyframes driftCloud {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(120vw);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sky-background"></div>
+
+    <button id='sky-exit' onclick='toggleHistorySheet()'>✕</button>
+
+    <div class="clouds-layer"></div>
+
+    <!-- HEADER (The Ceiling) -->
+    <div id="ledger-header" style="display: none;">
+        <h3 id="cullul-header">LEDGER</h3>
+    </div>
+
+    <!-- ROULETTE (The Heart) -->
+    <div id="roulette-center" style="display: none;">
+        <div id="roulette-container" class="roulette-container">
+            <!-- Roulette items injected here -->
+        </div>
+    </div>
+
+    <button class="ps-triangle-button" onclick="toggleServiceRendered()"
+        title="Toggle Client List / Add Service to Selected">
+        <div class="triangle-icon">△</div>
+    </button>
+
+    <button class="ps-square-button" onclick="bulkLogService()" title="Bulk Service Log for Street">
+        <div class="square-icon"></div>
+    </button>
+
+    <button class="ps-button" onclick="toggleSheet()">
+        <div class="circle-icon"></div>
+    </button>
+
+    <div id="clientSheet" class="sheet">
+        <div class="sheet-content">
+            <button class="close-btn" onclick="toggleSheet()">✕ Close</button>
+
+            <h2>Current Clients</h2>
+            <div class="form-grid" id="currentClientForm">
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="current-name" placeholder="Client Name" autocomplete="off">
+                    <div class="autocomplete-dropdown" id="current-autocomplete"></div>
+                </div>
+                <input type="text" id="current-address" placeholder="Address">
+                <div id="current-address-validation" class="address-validation-message"></div>
+                <input type="tel" id="current-phone" placeholder="Phone Number">
+
+                <select id="current-frequency">
+                    <option value="">Frequency...</option>
+                    <option>Weekly</option>
+                    <option>Biweekly</option>
+                    <option>Monthly</option>
+                    <option>Per Request</option>
+                </select>
+                <input type="text" id="current-frequency-price" placeholder="Price for Frequency ($)">
+
+                <div class="extra-service-header">
+                    <span>Extra Services:</span>
+                    <button type="button" class="add-extra-btn" onclick="addExtraService('current')"
+                        title="Add Another Extra Service">+</button>
+                </div>
+                <div id="current-extras-container">
+                    <!-- Extra services will be added here dynamically -->
+                </div>
+            </div>
+            <button class="save-btn" id="current-save-btn" onclick="saveCurrentClient()">Save Current Client</button>
+
+            <div class="section-divider"></div>
+
+            <h2>New One-Time Client</h2>
+            <div class="form-grid" id="oneTimeClientForm">
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="onetime-name" placeholder="Client Name" autocomplete="off">
+                    <div class="autocomplete-dropdown" id="onetime-autocomplete"></div>
+                </div>
+                <input type="text" id="onetime-address" placeholder="Client Info (Address/Phone)">
+                <div id="onetime-address-validation" class="address-validation-message"></div>
+                <input type="text" id="onetime-service" placeholder="Service Provided">
+                <input type="text" id="onetime-price" placeholder="Price ($)">
+                <textarea id="onetime-comments" placeholder="Comments"></textarea>
+            </div>
+            <button class="save-btn one-time-save" onclick="saveOneTimeClient()">Save One-Time Client</button>
+        </div>
+    </div>
+
+    <div id="clientListSheet" class="sheet client-list-sheet">
+        <div class="sheet-content">
+            <div class="list-actions">
+                <button class="add-client-btn" onclick="openEntryFromList()">Add Another Client</button>
+                <button class="main-menu-btn" onclick="closeAllSheets()">Close</button>
+            </div>
+            <h2>Client Information</h2>
+            <div id="clientListContainer"></div>
+            <div class="backup-actions">
+                <input type="file" id="restore-file" accept=".json" style="display: none;">
+                <button class="backup-btn" onclick="backupData()">Backup Data</button>
+                <button class="restore-btn" onclick="restoreData()">Restore Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="billingSheet" class="sheet billing-sheet">
+        <div class="sheet-content">
+            <div class="list-actions">
+                <button class="main-menu-btn" onclick="closeAllSheets()">Close Billing</button>
+            </div>
+            <h2>Service Billing</h2>
+
+            <!-- Command Bar -->
+            <div id="command-bar">
+                <button id="btn-log">△ Log Service</button>
+                <button id="btn-extra">+ Log Extra</button>
+                <button id="btn-paid">□ Mark Paid</button>
+            </div>
+
+            <!-- Billing Table -->
+            <div id="billingContainer">
+                <table id="billing-table">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Name</th>
+                            <th>Address</th>
+                            <th>Dates</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billing-tbody">
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Sheet - Dual Ledger -->
+    <div id="historySheet" class="sheet">
+        <div class="sheet-content">
+            <div class="list-actions">
+                <button class="main-menu-btn" onclick="closeAllSheets()">Close History</button>
+            </div>
+            <h2>Client Ledger</h2>
+            <div style="margin-bottom: 20px;">
+                <label for="history-client-filter" style="font-weight: 600; margin-right: 10px;">Select Client:</label>
+                <select id="history-client-filter" onchange="updateHistoryTable()"
+                    style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <option value="">-- Select a Client --</option>
+                </select>
+            </div>
+
+            <!-- Table 1: Service History -->
+            <h3 style="margin-top: 25px; margin-bottom: 15px; color: #2c3e50;">Service History</h3>
+            <div id="servicesContainer" style="margin-bottom: 40px;">
+                <table id="services-table"
+                    style="width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white;">
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Service
+                                Dates</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Services
+                                Rendered</th>
+                            <th style="padding: 15px; text-align: center; font-weight: 600; font-size: 14px;">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="services-tbody">
+                        <!-- Service entries will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table 2: Payment History -->
+            <h3 style="margin-top: 25px; margin-bottom: 15px; color: #2c3e50;">Payment Records</h3>
+            <div id="paymentsContainer">
+                <table id="payments-table"
+                    style="width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white;">
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Date / Time
+                            </th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Amount</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Method</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px;">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payments-tbody">
+                        <!-- Payment entries will be dynamically added here -->
+                    </tbody>
+                </table>
+                <div
+                    style="margin-top: 15px; font-weight: bold; font-size: 15px; text-align: right; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                    <span>Total Paid by Client: </span><span id="total-paid-amount" style="color: #27ae60;">$0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagnostics Sheet -->
+    <div id="diagnosticsSheet" class="sheet" style="display: none;">
+        <div class="sheet-content">
+            <div class="list-actions">
+                <button class="main-menu-btn" onclick="closeAllSheets()">Close</button>
+            </div>
+            <h2>🔧 GPS Diagnostics</h2>
+
+            <!-- Test Your Location -->
+            <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                <h3>Test Your Location</h3>
+                <button onclick="testUserLocation()"
+                    style="padding: 10px 15px; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Get My GPS Location
+                </button>
+                <div id="diagnostics-location-result"
+                    style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; min-height: 30px;">
+                </div>
+            </div>
+
+            <!-- Test Address Geocoding -->
+            <div style="margin: 20px 0; padding: 15px; background: #f3e5f5; border-radius: 8px;">
+                <h3>Test Address Geocoding</h3>
+                <input type="text" id="diagnostics-address-input"
+                    placeholder="Enter an address (e.g., 4117 95th St, Elmhurst, NY 11373)"
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px;" />
+                <button onclick="testGeocoding()"
+                    style="padding: 10px 15px; background: #9C27B0; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Test Geocoding
+                </button>
+                <div id="diagnostics-geocode-result"
+                    style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; min-height: 30px;">
+                </div>
+            </div>
+
+            <!-- Client GPS Status -->
+            <div style="margin: 20px 0; padding: 15px; background: #e8f5e9; border-radius: 8px;">
+                <h3>Client GPS Status</h3>
+                <button onclick="checkAllClientsGPS()"
+                    style="padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Check All Clients
+                </button>
+                <div id="diagnostics-clients-result"
+                    style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; min-height: 30px; overflow-x: auto;">
+                </div>
+            </div>
+
+            <!-- Troubleshooting Tips -->
+            <div style="margin: 20px 0; padding: 15px; background: #fff3e0; border-radius: 8px;">
+                <h3>Troubleshooting Tips</h3>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Make sure location permission is enabled in your browser</li>
+                    <li>Check that GPS coordinates are correct using Google Maps</li>
+                    <li>Nearby clients within 500 meters will be displayed on the sky</li>
+                    <li>Use the test tools above to diagnose location issues</li>
+                    <li>Open browser console (F12) to see detailed debugging logs</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Sheet -->
+    <div id="dashboardSheet" class="sheet" style="display: none;">
+        <div class="sheet-content">
+            <div class="list-actions">
+                <button class="main-menu-btn" onclick="closeAllSheets()">Close</button>
+            </div>
+            <h2>Dashboard</h2>
+
+            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h3 style="color: white;">🔍 Quick Street Search</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="streetSearch"
+                        placeholder="Type street name or number (e.g., '95th' or 'Elmhurst')..."
+                        style="flex: 1; padding: 12px; border-radius: 5px; border: none; font-size: 16px;"
+                        oninput="searchStreet(this.value)">
+                    <button class="btn" onclick="clearStreetSearch()"
+                        style="background: white; color: #667eea;">Clear</button>
+                </div>
+                <div id="streetSearchResults" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store clients in memory
+        let currentClients = [];
+        let currentDetectedStreet = "";
+        let oneTimeClients = [];
+        let paymentHistory = []; // Master ledger for service work
+        let paymentRecords = []; // Payment receipts ledger
+        let currentEditingId = null; // Track which current client is being edited
+        let oneTimeEditingId = null; // Track which one-time client is being edited
+        let selectedClientForHistory = null; // Track selected client for history filtering
+        const generateId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+        // Calculation functions
+        function parsePrice(price) {
+            if (!price || price === '') return 0;
+            const num = parseFloat(price.toString().replace(/[^0-9.-]/g, ''));
+            return isNaN(num) ? 0 : num;
+        }
+
+        function calculateCurrentClientTotal(client) {
+            const frequencyPrice = parsePrice(client.frequencyPrice);
+            const extrasTotal = (client.extras || []).reduce((total, extra) => total + parsePrice(extra.price), 0);
+            return frequencyPrice + extrasTotal;
+        }
+
+        function calculateOneTimeClientTotal(client) {
+            return parsePrice(client.price);
+        }
+
+        function calculateSectionTotal(clients, calculator) {
+            return clients.reduce((total, client) => total + calculator(client), 0);
+        }
+
+        // LocalStorage functions
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('currentClients', JSON.stringify(currentClients));
+                localStorage.setItem('oneTimeClients', JSON.stringify(oneTimeClients));
+                localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+                localStorage.setItem('paymentRecords', JSON.stringify(paymentRecords));
+            } catch (error) {
+                console.warn('Failed to save to LocalStorage:', error);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const savedCurrentClients = localStorage.getItem('currentClients');
+                const savedOneTimeClients = localStorage.getItem('oneTimeClients');
+                const savedPaymentHistory = localStorage.getItem('paymentHistory');
+                const savedPaymentRecords = localStorage.getItem('paymentRecords');
+
+                if (savedCurrentClients) {
+                    currentClients = JSON.parse(savedCurrentClients);
+                    // Ensure all clients have required properties and MIGRATE structure
+                    currentClients.forEach(client => {
+                        if (!client.extras) {
+                            client.extras = [];
+                        }
+                        // MIGRATION: Rename serviceLog to serviceLog
+                        if (client.serviceLog && !client.serviceLog) {
+                            client.serviceLog = client.serviceLog;
+                            delete client.serviceLog;
+                        }
+                        if (!client.serviceLog) {
+                            client.serviceLog = [];
+                        }
+                        if (!client.ledgerHistory) {
+                            client.ledgerHistory = [];
+                        }
+                        if (client.isPaid === undefined) {
+                            client.isPaid = false;
+                        }
+                    });
+                }
+                if (savedOneTimeClients) {
+                    oneTimeClients = JSON.parse(savedOneTimeClients);
+                    // Ensure all clients have required properties and MIGRATE structure
+                    oneTimeClients.forEach(client => {
+                        // MIGRATION: Rename serviceLog to serviceLog
+                        if (client.serviceLog && !client.serviceLog) {
+                            client.serviceLog = client.serviceLog;
+                            delete client.serviceLog;
+                        }
+                        if (!client.serviceLog) {
+                            client.serviceLog = [];
+                        }
+                        if (!client.ledgerHistory) {
+                            client.ledgerHistory = [];
+                        }
+                        if (client.isPaid === undefined) {
+                            client.isPaid = false;
+                        }
+                    });
+                }
+                if (savedPaymentHistory) {
+                    paymentHistory = JSON.parse(savedPaymentHistory);
+                } else {
+                    paymentHistory = [];
+                }
+                if (savedPaymentRecords) {
+                    paymentRecords = JSON.parse(savedPaymentRecords);
+                } else {
+                    paymentRecords = [];
+                }
+            } catch (error) {
+                console.warn('Failed to load from LocalStorage:', error);
+                // Reset to empty arrays if there's an error
+                currentClients = [];
+                oneTimeClients = [];
+                paymentHistory = [];
+                paymentRecords = [];
+            }
+        }
+
+        function toggleSheet() {
+            const entrySheet = document.getElementById('clientSheet');
+            const listSheet = document.getElementById('clientListSheet');
+            const billingSheet = document.getElementById('billingSheet');
+
+            // Circle Button: If ANY sheet is open, close all sheets
+            if (entrySheet.classList.contains('active') || listSheet.classList.contains('active') || billingSheet.classList.contains('active')) {
+                closeAllSheets();
+            } else {
+                // If no sheets are open, open the Entry Sheet
+                entrySheet.classList.add('active');
+                // Auto-focus on Client Name box for immediate keyboard access
+                setTimeout(() => {
+                    document.getElementById('current-name').focus();
+                }, 100);
+            }
+        }
+
+        function toggleServiceRendered() {
+            const rouletteActive = document.getElementById('roulette-center').offsetParent !== null;
+
+            if (rouletteActive && rouletteClients.length > 0) {
+                // If roulette is active, log service for the active client
+                const activeClientId = rouletteClients[rouletteIndex].id;
+                quickLogService(activeClientId);
+
+                // Visual feedback on button
+                const triangleBtn = document.querySelector('.ps-triangle-button');
+                if (triangleBtn) {
+                    triangleBtn.classList.add('pulse-success');
+                    setTimeout(() => triangleBtn.classList.remove('pulse-success'), 600);
+                }
+            } else {
+                // Otherwise, open billing sheet (original behavior)
+                const entrySheet = document.getElementById('clientSheet');
+                const billingSheet = document.getElementById('billingSheet');
+
+                if (billingSheet.classList.contains('active')) {
+                    billingSheet.classList.remove('active');
+                } else {
+                    entrySheet.classList.remove('active');
+                    document.getElementById('clientListSheet').classList.remove('active');
+                    billingSheet.classList.add('active');
+                    updateBillingList();
+                }
+            }
+        }
+
+        function closeAllSheets() {
+            document.getElementById('clientSheet').classList.remove('active');
+            document.getElementById('clientListSheet').classList.remove('active');
+            document.getElementById('billingSheet').classList.remove('active');
+            document.getElementById('historySheet').classList.remove('active');
+            // Sky exit button remains visible for emergency access
+        }
+
+
+
+        function validateAddress(address) {
+            if (!address) return false;
+
+            const trimmed = address.trim();
+            if (trimmed.length < 5) return false;
+
+            // Reject purely numeric (or numeric with basic separators) -> likely phone/zip only
+            if (/^[\d\s\-()+]+$/.test(trimmed)) return false;
+
+            // Require leading house number
+            const match = trimmed.match(/^(\d+)\s+(.+)$/);
+            if (!match) return false;
+
+            const streetPart = match[2].trim();
+            // Require at least one word in street part
+            if (!streetPart || streetPart.split(/\s+/).length < 1) return false;
+
+            // Very loose city/ZIP encouragement (not mandatory, so don't fail if missing)
+            // If we reach here, the format is acceptable
+            return true;
+        }
+
+        function saveCurrentClient() {
+            const name = document.getElementById('current-name').value;
+            const address = document.getElementById('current-address').value;
+
+            if (!name || !address) {
+                alert('Please fill in at least Name and Address');
+                return;
+            }
+
+            if (!validateAddress(address)) {
+                alert('Please enter a valid street address (e.g., 123 Main St, Queens, NY).');
+                return;
+            }
+
+            // Validate frequency has price
+            const frequency = document.getElementById('current-frequency').value;
+            const frequencyPrice = document.getElementById('current-frequency-price').value;
+
+            if (frequency && !frequencyPrice) {
+                alert('Please enter a price for the selected frequency');
+                document.getElementById('current-frequency-price').focus();
+                return;
+            }
+
+            // Collect extra services
+            const extras = [];
+            const extraItems = document.querySelectorAll('#current-extras-container .extra-service-item');
+            extraItems.forEach(item => {
+                const serviceName = item.querySelector('.extra-service-input').value.trim();
+                const priceInput = item.querySelector('.extra-price-input');
+                const price = priceInput ? priceInput.value.trim() : '';
+                if (serviceName && price) {
+                    extras.push({ serviceName: serviceName, price: price });
+                }
+            });
+
+            const existingClient = currentEditingId ? currentClients.find(c => c.id === currentEditingId) : null;
+            const client = {
+                type: 'Current Client',
+                id: currentEditingId || generateId(),
+                name: name,
+                address: address,
+                phone: document.getElementById('current-phone').value,
+                frequency: document.getElementById('current-frequency').value,
+                frequencyPrice: document.getElementById('current-frequency-price').value,
+                extras: extras,
+                serviceLog: existingClient?.serviceLog || [],
+                ledgerHistory: existingClient?.ledgerHistory || [],
+                isPaid: existingClient?.isPaid || false
+            };
+
+            // OVERWRITE system: Check if client name already exists and replace
+            const existingIndex = currentClients.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
+            if (existingIndex !== -1) {
+                // Overwrite existing client with new data
+                client.id = currentClients[existingIndex].id; // Keep original ID
+                currentClients[existingIndex] = client;
+            } else {
+                // Create new client
+                currentClients.push(client);
+            }
+
+            clearCurrentClientForm();
+            saveToLocalStorage(); // Save to LocalStorage
+            closeEntrySheetAndShowList();
+        }
+
+        function saveOneTimeClient() {
+            const name = document.getElementById('onetime-name').value;
+            const address = document.getElementById('onetime-address').value;
+
+            if (!name || !address) {
+                alert('Please fill in at least Name and Address');
+                return;
+            }
+
+            if (!validateAddress(address)) {
+                alert('Please enter a valid street address (e.g., 123 Main St, Queens, NY).');
+                return;
+            }
+
+            const existingClient = oneTimeEditingId ? oneTimeClients.find(c => c.id === oneTimeEditingId) : null;
+            const client = {
+                type: 'One-Time Client',
+                id: oneTimeEditingId || generateId(),
+                name: name,
+                address: address,
+                service: document.getElementById('onetime-service').value,
+                price: document.getElementById('onetime-price').value,
+                comments: document.getElementById('onetime-comments').value,
+                serviceLog: existingClient?.serviceLog || [],
+                ledgerHistory: existingClient?.ledgerHistory || [],
+                isPaid: existingClient?.isPaid || false
+            };
+
+            // OVERWRITE system: Check if client name already exists and replace
+            const existingIndex = oneTimeClients.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
+            if (existingIndex !== -1) {
+                // Overwrite existing client with new data
+                client.id = oneTimeClients[existingIndex].id; // Keep original ID
+                oneTimeClients[existingIndex] = client;
+            } else {
+                // Create new client
+                oneTimeClients.push(client);
+            }
+
+            clearOneTimeClientForm();
+            saveToLocalStorage(); // Save to LocalStorage
+            closeEntrySheetAndShowList();
+        }
+
+        function clearCurrentClientForm() {
+            document.getElementById('current-name').value = '';
+            document.getElementById('current-address').value = '';
+            document.getElementById('current-phone').value = '';
+            document.getElementById('current-frequency').value = '';
+            document.getElementById('current-frequency-price').value = '';
+            document.getElementById('current-extras-container').innerHTML = '';
+            // Add one empty extra service pair
+            addExtraServiceItem('current');
+            currentEditingId = null;
+        }
+
+        function clearOneTimeClientForm() {
+            document.getElementById('onetime-name').value = '';
+            document.getElementById('onetime-address').value = '';
+            document.getElementById('onetime-service').value = '';
+            document.getElementById('onetime-price').value = '';
+            document.getElementById('onetime-comments').value = '';
+            oneTimeEditingId = null;
+        }
+
+        function closeEntrySheetAndShowList() {
+            document.getElementById('clientSheet').classList.remove('active');
+            updateClientList();
+            setTimeout(() => {
+                document.getElementById('clientListSheet').classList.add('active');
+            }, 300);
+        }
+
+        function updateBillingList() {
+            const tbody = document.getElementById('billing-tbody');
+
+            // Clear existing rows
+            tbody.innerHTML = '';
+
+            // Combine currentClients and oneTimeClients - show EVERY client
+            const allClients = [...currentClients, ...oneTimeClients];
+
+            if (allClients.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="5" style="text-align: center; padding: 40px; color: #999;">No clients to bill yet.</td>';
+                tbody.appendChild(emptyRow);
+                return;
+            }
+
+            // Use forEach to render a row for EVERY client
+            allClients.forEach(client => {
+                // Initializing required properties
+                if (!client.serviceLog) client.serviceLog = [];
+
+                const row = document.createElement('tr');
+
+                // Checkbox column
+                const checkboxCell = document.createElement('td');
+                checkboxCell.style.textAlign = 'center';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'client-checkbox';
+                checkbox.setAttribute('data-client-id', client.id);
+                checkboxCell.appendChild(checkbox);
+                row.appendChild(checkboxCell);
+
+                // Name column with status indicator
+                const nameCell = document.createElement('td');
+                const statusDot = `<span style='color:${getStatusColor(client)}; margin-right:8px;'>●</span>`;
+                nameCell.innerHTML = statusDot + (client.name || '-');
+                row.appendChild(nameCell);
+
+                // Address column
+                const addressCell = document.createElement('td');
+                addressCell.textContent = client.address || '-';
+                row.appendChild(addressCell);
+
+                // Dates column - SMART FILTERING & CYCLE RESET
+                const datesCell = document.createElement('td');
+                datesCell.style.textAlign = 'center';
+                const totalEntries = client.serviceLog || [];
+
+                if (totalEntries.length === 0) {
+                    datesCell.textContent = 'None';
+                } else {
+                    // 1. Find the last entry with a semicolon (Cycle Reset Point)
+                    let sIdx = -1;
+                    for (let i = totalEntries.length - 1; i >= 0; i--) {
+                        if ((totalEntries[i].date || '').includes(';')) {
+                            sIdx = i;
+                            break;
+                        }
+                    }
+
+                    // 2. Identify the start of the CURRENT cycle
+                    const segmentStart = sIdx + 1;
+                    const relativeEntries = totalEntries.length - segmentStart;
+
+                    const freq = (client.frequency || '').toLowerCase();
+                    let limit = 4; // Default Weekly
+                    if (freq === 'biweekly') limit = 2;
+                    else if (freq === 'monthly') limit = 1;
+                    else if (freq === 'per request') limit = 5;
+
+                    // Math: Hide completed cycles within the current segment
+                    const cyclesPassed = Math.max(0, Math.floor((relativeEntries - 1) / limit));
+                    const startIndex = segmentStart + (cyclesPassed * limit);
+
+                    // 3. Render the CURRENT cycle
+                    const visibleLog = totalEntries.slice(startIndex);
+                    visibleLog.forEach((service, vIdx) => {
+                        const actualIdx = startIndex + vIdx;
+                        const dateStr = (service.date || '');
+                        const logEntry = document.createElement('span');
+                        logEntry.className = 'log-entry';
+                        logEntry.textContent = dateStr;
+                        logEntry.onclick = () => editServiceEntry(client.id, actualIdx);
+
+                        datesCell.appendChild(logEntry);
+
+                        if (vIdx < visibleLog.length - 1) {
+                            datesCell.appendChild(document.createTextNode(', '));
+
+                            // Wrapping within the visible block
+                            let shouldBreak = false;
+                            if (dateStr.includes(';')) shouldBreak = true;
+                            else if (freq === 'weekly') shouldBreak = (vIdx + 1) % 4 === 0;
+                            else if (freq === 'biweekly') shouldBreak = (vIdx + 1) % 2 === 0;
+                            else if (freq === 'monthly') shouldBreak = true;
+                            else if (freq === 'per request') shouldBreak = (vIdx + 1) % 5 === 0;
+
+                            if (shouldBreak) {
+                                datesCell.appendChild(document.createElement('br'));
+                            }
+                        }
+                    });
+                }
+
+                row.appendChild(datesCell);
+
+                // Balance column - USE NET BALANCE CALCULATOR
+                const balanceCell = document.createElement('td');
+                const currentBalance = getNetBalance(client);
+                balanceCell.style.textAlign = 'center';
+                balanceCell.style.fontWeight = 'bold';
+
+                balanceCell.style.color = currentBalance > 0 ? '#e74c3c' : '#7f8c8d';
+
+                balanceCell.textContent = `$${currentBalance.toFixed(2)}`;
+                row.appendChild(balanceCell);
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // GLOBAL BILLING BUTTON LOGIC
+        document.addEventListener('click', function (e) {
+            // Sky exit button is handled by onclick attribute
+            // closeAllSheets() is called directly from the button
+
+            if (e.target && e.target.id === 'btn-log') {
+                const selected = document.querySelectorAll('.client-checkbox:checked');
+                const today = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+                const dayInitial = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][new Date().getDay()];
+                const timestamp = Date.now(); // Add timestamp for tracking
+
+                selected.forEach(box => {
+                    const id = box.getAttribute('data-client-id');
+                    let client = currentClients.find(c => c.id == id) || oneTimeClients.find(c => c.id == id);
+                    if (client) {
+                        if (!client.serviceLog) client.serviceLog = [];
+                        const price = parseFloat(client.frequencyPrice || client.price || 0);
+                        client.serviceLog.push({ type: 'mow', date: `${dayInitial} ${today}`, price: price, timestamp: timestamp });
+                    }
+                });
+
+                // REFRESH ALL UI IMMEDIATELY
+                saveToLocalStorage();
+                updateBillingList();
+
+                // Also refresh roulette if active
+                const rouletteContainer = document.getElementById('roulette-container');
+                if (rouletteContainer && rouletteContainer.offsetParent !== null) {
+                    renderRoulette();
+                }
+                saveToLocalStorage();
+            }
+
+            if (e.target && e.target.id === 'btn-extra') {
+                const selected = document.querySelectorAll('.client-checkbox:checked');
+                if (selected.length === 0) {
+                    alert('Please select at least one client');
+                    return;
+                }
+
+                // Show the custom modal instead of prompt
+                showExtraModal(selected);
+            }
+
+            if (e.target && e.target.id === 'btn-paid') {
+                const selected = document.querySelectorAll('.client-checkbox:checked');
+                if (selected.length === 0) {
+                    alert('Please select at least one client');
+                    return;
+                }
+                // Store selected clients for payment modal
+                showPaymentModal(selected);
+            }
+        });
+
+        // Payment Modal Functions
+        let selectedClientsForPayment = [];
+
+        function showPaymentModal(selectedClients) {
+            selectedClientsForPayment = selectedClients;
+            const modal = document.getElementById('payment-modal');
+            document.getElementById('payment-amount').value = '';
+            document.getElementById('payment-method').value = '';
+            document.getElementById('payment-notes').value = '';
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('payment-amount').focus(), 100);
+        }
+
+        function hidePaymentModal() {
+            const modal = document.getElementById('payment-modal');
+            modal.style.display = 'none';
+            selectedClientsForPayment = [];
+        }
+
+        function processPayment() {
+            const amountInput = document.getElementById('payment-amount').value;
+            const amount = parseFloat(amountInput || 0);
+            const method = document.getElementById('payment-method').value;
+            const notes = document.getElementById('payment-notes').value.trim();
+
+            if (amount <= 0 && !amountInput) {
+                alert('Please enter a valid amount');
+                return;
+            }
+
+            if (!method) {
+                alert('Please select a payment method');
+                return;
+            }
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Process payment for each selected client
+            selectedClientsForPayment.forEach(box => {
+                const clientId = box.getAttribute('data-client-id');
+
+                // Find client in BOTH arrays and update BOTH
+                let currentClient = currentClients.find(c => c.id == clientId);
+                let oneTimeClient = oneTimeClients.find(c => c.id == clientId);
+
+                let client = currentClient || oneTimeClient;
+
+                if (client) {
+                    // Record payment
+                    paymentRecords.push({
+                        date: dateStr,
+                        time: timeStr,
+                        amount: amount,
+                        method: method,
+                        note: notes,
+                        clientId: clientId,
+                        clientName: client.name
+                    });
+
+                    // Update partial payments total
+                    client.partialPaymentsTotal = (client.partialPaymentsTotal || 0) + amount;
+
+                    // Only clear serviceLog if balance is fully paid (or overpaid)
+                    if (getNetBalance(client) <= 0.01) {
+                        // Archive services to ledger history
+                        if (!client.ledgerHistory) client.ledgerHistory = [];
+
+                        if (client.serviceLog && client.serviceLog.length > 0) {
+                            const totalServiceAmount = calculateClientBalance(client);
+
+                            client.ledgerHistory.push({
+                                services: [...client.serviceLog], // Clone array
+                                totalAmount: totalServiceAmount,
+                                completedDate: dateStr,
+                                paidDate: dateStr
+                            });
+                        }
+
+                        // Clear serviceLog and reset payments
+                        client.serviceLog = [];
+                        client.partialPaymentsTotal = 0;
+                        client.isPaid = true;
+                    } else {
+                        client.isPaid = false;
+                    }
+                }
+            });
+
+            // CRITICAL: Save BEFORE refreshing views
+            saveToLocalStorage();
+
+            // Close modal
+            hidePaymentModal();
+
+            // Refresh ALL views
+            updateBillingList();
+
+            if (document.getElementById('historySheet').classList.contains('active')) {
+                updateHistoryTable();
+            }
+
+            // Force roulette refresh
+            if (document.getElementById('roulette-container') && document.getElementById('roulette-container').offsetParent !== null) {
+                renderRoulette();
+            }
+        }
+
+        // Payment Modal Event Listeners
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'payment-modal-close') {
+                hidePaymentModal();
+            }
+            if (e.target && e.target.id === 'payment-modal-cancel') {
+                hidePaymentModal();
+            }
+            if (e.target && e.target.id === 'payment-modal-save') {
+                processPayment();
+            }
+        });
+
+        // Enter key support for payment modal
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && document.getElementById('payment-modal').style.display === 'flex') {
+                processPayment();
+            }
+            if (e.key === 'Escape' && document.getElementById('payment-modal').style.display === 'flex') {
+                hidePaymentModal();
+            }
+        });
+
+        // Extra Service Modal Functions
+        function showExtraModal(selectedClients) {
+            const modal = document.getElementById('extra-modal');
+            const input = document.getElementById('extra-input');
+            const dropdown = document.getElementById('extra-dropdown');
+
+            // Clear previous state
+            input.value = '';
+            dropdown.innerHTML = '';
+            dropdown.style.display = 'none';
+
+            // Store selected clients for later use
+            modal._selectedClients = selectedClients;
+
+            // Populate dropdown with saved extras (if single client selected)
+            if (selectedClients.length === 1) {
+                const clientId = selectedClients[0].getAttribute('data-client-id');
+                const client = currentClients.find(c => c.id == clientId) || oneTimeClients.find(c => c.id == clientId);
+
+                if (client && client.extras && client.extras.length > 0) {
+                    client.extras.forEach(extra => {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-item';
+                        const name = extra.serviceName || extra.name || 'Unknown';
+                        const price = extra.price || extra.servicePrice || 0;
+                        item.textContent = `${name} $${price}`;
+                        item.onclick = () => {
+                            input.value = `${name} $${price}`;
+                            dropdown.style.display = 'none';
+                            input.focus();
+                        };
+                        dropdown.appendChild(item);
+                    });
+                }
+            }
+
+            // Show modal and focus input
+            modal.style.display = 'flex';
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function hideExtraModal() {
+            const modal = document.getElementById('extra-modal');
+            const input = document.getElementById('extra-input');
+            const dropdown = document.getElementById('extra-dropdown');
+
+            modal.style.display = 'none';
+            input.value = '';
+            dropdown.style.display = 'none';
+            delete modal._selectedClients;
+        }
+
+        function processExtraService() {
+            const modal = document.getElementById('extra-modal');
+            const input = document.getElementById('extra-input');
+            const selectedClients = modal._selectedClients;
+
+            if (!selectedClients || selectedClients.length === 0) return;
+
+            const extraInput = input.value.trim();
+            if (!extraInput) return;
+
+            // Extract price using existing logic
+            const priceMatch = extraInput.match(/\$(\d+(?:\.\d{2})?)/);
+            const extraPrice = priceMatch ? parseFloat(priceMatch[1]) : 0;
+            const timestamp = Date.now(); // Add timestamp for tracking
+
+            // Apply to all selected clients using existing serviceLog format
+            selectedClients.forEach(box => {
+                const id = box.getAttribute('data-client-id');
+                let client = currentClients.find(c => c.id == id) || oneTimeClients.find(c => c.id == id);
+                if (client) {
+                    if (!client.serviceLog) client.serviceLog = [];
+                    client.serviceLog.push({ type: 'extra', date: extraInput, price: extraPrice, timestamp: timestamp });
+                }
+            });
+
+            saveToLocalStorage();
+            updateBillingList();
+            hideExtraModal();
+        }
+
+        // Modal Event Listeners
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'modal-close') {
+                hideExtraModal();
+            }
+            if (e.target && e.target.id === 'modal-cancel') {
+                hideExtraModal();
+            }
+            if (e.target && e.target.id === 'modal-ok') {
+                processExtraService();
+            }
+            if (e.target && e.target.id === 'extra-dropdown-toggle') {
+                const dropdown = document.getElementById('extra-dropdown');
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        // Enter key support
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && document.getElementById('extra-modal').style.display === 'flex') {
+                processExtraService();
+            }
+            if (e.key === 'Escape' && document.getElementById('extra-modal').style.display === 'flex') {
+                hideExtraModal();
+            }
+        });
+
+        // Status color calculation for scheduling indicators
+        function getStatusColor(client) {
+            if (!client.serviceLog || client.serviceLog.length === 0) return '#95a5a6'; // Gray: No history
+            const lastService = client.serviceLog.filter(s => s.type === 'mow').pop();
+            if (!lastService) return '#95a5a6';
+
+            // Extract date (Assuming format 'M 1/16')
+            const match = lastService.date.match(/(\d+)\/(\d+)/);
+            if (!match) return '#95a5a6';
+            const lastDate = new Date(new Date().getFullYear(), match[1] - 1, match[2]);
+            const daysSince = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24));
+
+            const freq = (client.frequency || '').toLowerCase();
+
+            // Red ONLY if OVERDUE (past the frequency period)
+            if (freq === 'weekly' && daysSince >= 8) return '#e74c3c'; // Red - overdue
+            if (freq === 'weekly' && daysSince >= 6) return '#f1c40f'; // Yellow - due soon
+            if (freq === 'biweekly' && daysSince >= 15) return '#e74c3c'; // Red - overdue
+            if (freq === 'biweekly' && daysSince >= 12) return '#f1c40f'; // Yellow - due soon
+            if (freq === 'monthly' && daysSince >= 32) return '#e74c3c'; // Red - overdue
+
+            return '#2ecc71'; // Green - all good
+        }
+
+        function editServiceEntry(clientId, serviceIndex) {
+            // Find the client
+            let client = currentClients.find(c => c.id == clientId) || oneTimeClients.find(c => c.id == clientId);
+            if (!client || !client.serviceLog || !client.serviceLog[serviceIndex]) return;
+
+            const service = client.serviceLog[serviceIndex];
+            const action = prompt(`Edit service entry: "${service.date}"\n\nType "edit" to change price, "delete" to remove, "semicolon" to toggle break, or "cancel" to do nothing:`);
+
+            if (!action) return;
+
+            const lowerAction = action.toLowerCase().trim();
+
+            if (lowerAction === 'delete') {
+                // Remove the service entry
+                client.serviceLog.splice(serviceIndex, 1);
+                alert('Service entry deleted.');
+            } else if (lowerAction === 'edit') {
+                // Edit the price
+                const newPriceInput = prompt(`Current price: $${service.price}\n\nEnter new price:`);
+                if (newPriceInput && !isNaN(parseFloat(newPriceInput))) {
+                    const newPrice = parseFloat(newPriceInput);
+                    service.price = newPrice;
+                    alert(`Price updated to $${newPrice}.`);
+                } else {
+                    alert('Invalid price entered.');
+                    return;
+                }
+            } else if (lowerAction === 'semicolon' || lowerAction === 'semi') {
+                // Toggle semicolon break
+                if (service.date.includes(';')) {
+                    service.date = service.date.replace(';', '').trim();
+                } else {
+                    service.date = (service.date + ';').replace(/\s*;\s*/g, '; ');
+                }
+            } else {
+                return; // Cancel or invalid input
+            }
+
+            // Recalculate balance - NO NEED, calculated dynamically
+            saveToLocalStorage();
+            updateBillingList();
+        }
+
+        function deleteHistoryEntry(index) {
+            if (confirm('Remove this entry from the Payment History Ledger?')) {
+                paymentHistory.splice(index, 1);
+                saveToLocalStorage();
+                updateHistoryTable();
+            }
+        }
+
+        function updateHistoryTable() {
+            const filterSelect = document.getElementById('history-client-filter');
+            const selectedClientId = filterSelect.value; // Now stores clientId, not just name
+
+            // Clear both tables
+            const servicesTbody = document.getElementById('services-tbody');
+            const paymentsTbody = document.getElementById('payments-tbody');
+            servicesTbody.innerHTML = '';
+            paymentsTbody.innerHTML = '';
+
+            // If no client selected, show message
+            if (!selectedClientId) {
+                servicesTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999;">Select a client to view their ledger.</td></tr>';
+                paymentsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">Select a client to view their payments.</td></tr>';
+                document.getElementById('total-paid-amount').textContent = '$0.00';
+                return;
+            }
+
+            // Get the selected client object to get their name
+            let selectedClient = currentClients.find(c => c.id === selectedClientId) || oneTimeClients.find(c => c.id === selectedClientId);
+            if (!selectedClient) return;
+
+            // ===== TABLE 1: SERVICE HISTORY =====
+            // Combine history from the client's ledgerHistory property
+            let clientServices = selectedClient.ledgerHistory || [];
+
+            // Pending services from serviceLog
+            let pendingServices = selectedClient.serviceLog || [];
+
+            if (clientServices.length === 0 && pendingServices.length === 0) {
+                servicesTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999;">No service history.</td></tr>';
+            } else {
+                // Helper function to format dates based on frequency
+                function formatDatesWithBreaks(services, frequency) {
+                    const freq = (frequency || '').toLowerCase();
+                    let datesPerLine = 5; // Default
+                    if (freq === 'monthly') datesPerLine = 1;
+                    else if (freq === 'weekly') datesPerLine = 4;
+                    else if (freq === 'biweekly') datesPerLine = 2;
+
+                    let lines = [];
+                    let currentLine = [];
+
+                    services.forEach(service => {
+                        const dateStr = service.date || '';
+                        const hasSemicolon = dateStr.includes(';');
+                        const cleanDate = dateStr.replace(';', '');
+
+                        currentLine.push(cleanDate);
+
+                        if (hasSemicolon || currentLine.length >= datesPerLine) {
+                            lines.push(currentLine.join(', '));
+                            currentLine = [];
+                        }
+                    });
+
+                    if (currentLine.length > 0) {
+                        lines.push(currentLine.join(', '));
+                    }
+
+                    return lines.join('<br>');
+                }
+
+                // Display ARCHIVED services from ledgerHistory
+                clientServices.forEach(entry => {
+                    if (entry.services && entry.services.length > 0) {
+                        const serviceDates = formatDatesWithBreaks(entry.services, selectedClient.frequency);
+                        const serviceTypes = new Set();
+                        entry.services.forEach(s => {
+                            if (s.type === 'mow') serviceTypes.add('Mowing');
+                            if (s.type === 'extra') serviceTypes.add('Extra Service');
+                        });
+                        const description = Array.from(serviceTypes).join(', ') || 'Service';
+
+                        const row = document.createElement('tr');
+                        row.style.borderBottom = '1px solid #eee';
+                        row.innerHTML = `
+                            <td style="padding: 15px; font-size: 14px; color: #333; vertical-align: top;">${serviceDates}</td>
+                            <td style="padding: 15px; font-size: 14px; color: #333; vertical-align: top;">${description}</td>
+                            <td style="padding: 15px; text-align: center; font-size: 14px; font-weight: bold; color: #27ae60; vertical-align: top;">$${parseFloat(entry.totalAmount || 0).toFixed(2)}</td>
+                        `;
+                        servicesTbody.appendChild(row);
+                    }
+                });
+
+                // Display PENDING services from serviceLog
+                if (pendingServices.length > 0) {
+                    const serviceDates = formatDatesWithBreaks(pendingServices, selectedClient.frequency);
+                    const serviceTypes = new Set();
+                    pendingServices.forEach(s => {
+                        if (s.type === 'mow') serviceTypes.add('Mowing');
+                        if (s.type === 'extra') serviceTypes.add('Extra Service');
+                    });
+                    const description = Array.from(serviceTypes).join(', ') || 'Service';
+                    const totalCost = pendingServices.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
+
+                    const row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #eee';
+                    row.style.backgroundColor = '#fff9e6';
+                    row.innerHTML = `
+                        <td style="padding: 15px; font-size: 14px; color: #333; vertical-align: top;">${serviceDates}</td>
+                        <td style="padding: 15px; font-size: 14px; color: #333; vertical-align: top;">${description} <span style="color: #999; font-size: 12px;">(Pending)</span></td>
+                        <td style="padding: 15px; text-align: center; font-size: 14px; font-weight: bold; color: #f39c12; vertical-align: top;">$${totalCost.toFixed(2)}</td>
+                    `;
+                    servicesTbody.appendChild(row);
+                }
+            }
+
+            // ===== TABLE 2: PAYMENT RECORDS =====
+            const clientPayments = paymentRecords.filter(record => record.clientId === selectedClientId);
+            let totalPaid = 0;
+
+            if (clientPayments.length === 0) {
+                paymentsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">No payments recorded.</td></tr>';
+            } else {
+                clientPayments.forEach(payment => {
+                    totalPaid += parseFloat(payment.amount || 0);
+                    const row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #eee';
+                    row.innerHTML = `
+                        <td style="padding: 15px; font-size: 14px; color: #333;">${payment.date} ${payment.time}</td>
+                        <td style="padding: 15px; font-size: 14px; font-weight: bold; color: #27ae60;">$${parseFloat(payment.amount).toFixed(2)}</td>
+                        <td style="padding: 15px; font-size: 14px; color: #666;">${payment.method}</td>
+                        <td style="padding: 15px; font-size: 14px; color: #666;">${payment.note || '-'}</td>
+                    `;
+                    paymentsTbody.appendChild(row);
+                });
+            }
+
+            // Update total paid amount
+            document.getElementById('total-paid-amount').textContent = `$${totalPaid.toFixed(2)}`;
+        }
+
+        function updateHistoryList() {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '';
+
+            if (paymentHistory.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">No payment history yet.</td>';
+                tbody.appendChild(emptyRow);
+                return;
+            }
+
+            // Sort history by completion date (newest first)
+            const sortedHistory = paymentHistory.sort((a, b) =>
+                new Date(b.completedDate) - new Date(a.completedDate)
+            );
+
+            sortedHistory.forEach(entry => {
+                const row = document.createElement('tr');
+
+                // Date column
+                const dateCell = document.createElement('td');
+                dateCell.textContent = entry.completedDate;
+                row.appendChild(dateCell);
+
+                // Client Name column
+                const nameCell = document.createElement('td');
+                nameCell.textContent = entry.clientName;
+                row.appendChild(nameCell);
+
+                // Amount column
+                const amountCell = document.createElement('td');
+                amountCell.style.fontWeight = 'bold';
+                amountCell.textContent = `$${entry.totalAmount.toFixed(2)}`;
+                row.appendChild(amountCell);
+
+                // Status column
+                const statusCell = document.createElement('td');
+                statusCell.style.fontWeight = 'bold';
+                statusCell.style.color = entry.status === 'PAID' ? '#27ae60' : '#e74c3c';
+                statusCell.textContent = entry.status;
+                row.appendChild(statusCell);
+
+                // Services column
+                const servicesCell = document.createElement('td');
+                servicesCell.textContent = `${entry.serviceCount} services (${entry.dateRange})`;
+                row.appendChild(servicesCell);
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateClientList() {
+            const container = document.getElementById('clientListContainer');
+
+            if (currentClients.length === 0 && oneTimeClients.length === 0) {
+                container.innerHTML = '<p class="no-clients">No clients saved yet.</p>';
+                return;
+            }
+
+            let html = '';
+
+            // Permanent Routes (Current Clients)
+            if (currentClients.length > 0) {
+                const sortedCurrent = [...currentClients].sort((a, b) => {
+                    const addressA = (a.address || '').toLowerCase();
+                    const addressB = (b.address || '').toLowerCase();
+                    return addressA.localeCompare(addressB);
+                });
+
+                html += '<h3 class="list-section-title">Permanent Routes</h3>';
+                html += '<table class="client-table"><thead><tr>';
+                html += '<th>Select</th><th>Name</th><th>Address</th><th>Phone</th><th>Details</th><th>Actions</th>';
+                html += '</tr></thead><tbody>';
+
+                sortedCurrent.forEach(client => {
+                    const totalOwed = calculateCurrentClientTotal(client);
+                    const currentBalance = calculateClientBalance(client);
+                    html += '<tr>';
+                    html += `<td style="text-align: center;"><input type="checkbox" class="client-select" data-client-id="${client.id}"></td>`;
+                    html += `<td>${client.name || '-'}</td>`;
+                    html += `<td>${client.address || '-'}</td>`;
+                    // Make phone number clickable if it exists
+                    const phoneDisplay = client.phone ?
+                        `<a href="tel:${client.phone}" class="phone-link" title="Call ${client.name}">${client.phone}</a>` :
+                        '-';
+                    html += `<td>${phoneDisplay}</td>`;
+                    html += '<td class="details-cell">';
+                    html += `<div><strong>Frequency:</strong> ${client.frequency || '-'}</div>`;
+                    if (client.frequencyPrice) html += `<div><strong>Frequency Price:</strong> $${client.frequencyPrice}</div>`;
+                    // Show extras as separate lines
+                    if (client.extras && client.extras.length > 0) {
+                        client.extras.forEach(extra => {
+                            const serviceName = extra.serviceName || extra.description || 'Extra Service';
+                            html += `<div><strong>${serviceName}:</strong> $${extra.price}</div>`;
+                        });
+                    }
+                    html += '</td>';
+                    html += '<td class="actions-cell">';
+                    html += `<button class="delete-btn" onclick="deleteClient('${client.id}')" title="Delete Client">✕</button>`;
+                    html += '</td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+            }
+
+            // One-Time Jobs
+            if (oneTimeClients.length > 0) {
+                const sortedOneTime = [...oneTimeClients].sort((a, b) => {
+                    const addressA = (a.address || '').toLowerCase();
+                    const addressB = (b.address || '').toLowerCase();
+                    return addressA.localeCompare(addressB);
+                });
+
+                html += '<h3 class="list-section-title one-time-title">One-Time Jobs</h3>';
+                html += '<table class="client-table"><thead><tr>';
+                html += '<th>Select</th><th>Name</th><th>Address</th><th>Phone</th><th>Details</th><th>Actions</th>';
+                html += '</tr></thead><tbody>';
+
+                sortedOneTime.forEach(client => {
+                    const totalOwed = calculateOneTimeClientTotal(client);
+                    const currentBalance = calculateClientBalance(client);
+                    html += '<tr>';
+                    html += `<td style="text-align: center;"><input type="checkbox" class="client-select" data-client-id="${client.id}"></td>`;
+                    html += `<td>${client.name || '-'}</td>`;
+                    html += `<td>${client.address || '-'}</td>`;
+                    html += `<td>-</td>`;
+                    html += '<td class="details-cell">';
+                    if (client.price) html += `<div><strong>Price:</strong> $${client.price}</div>`;
+                    if (client.comments) html += `<div><strong>Comments:</strong> ${client.comments}</div>`;
+                    html += '</td>';
+                    html += '<td class="actions-cell">';
+                    html += `<button class="delete-btn" onclick="deleteClient('${client.id}')" title="Delete Client">✕</button>`;
+                    html += '</td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        function deleteCurrentClient(id) {
+            currentClients = currentClients.filter(c => c.id !== id);
+            saveToLocalStorage(); // Save to LocalStorage after deletion
+            // Refresh both lists if they're open
+            if (document.getElementById('clientListSheet').classList.contains('active')) {
+                updateClientList();
+            }
+            if (document.getElementById('billingSheet').classList.contains('active')) {
+                updateBillingList();
+            }
+        }
+
+        function deleteClient(id) {
+            // Remove from both arrays (in case of duplicates)
+            currentClients = currentClients.filter(c => c.id !== id);
+            oneTimeClients = oneTimeClients.filter(c => c.id !== id);
+            saveToLocalStorage(); // Save to LocalStorage after deletion
+            // Refresh both lists if they're open
+            if (document.getElementById('clientListSheet').classList.contains('active')) {
+                updateClientList();
+            }
+            if (document.getElementById('billingSheet').classList.contains('active')) {
+                updateBillingList();
+            }
+        }
+
+        function openEntryFromList() {
+            // Clear both forms for new entry
+            clearCurrentClientForm();
+            clearOneTimeClientForm();
+
+            document.getElementById('clientListSheet').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('clientSheet').classList.add('active');
+            }, 200);
+        }
+
+        function serviceRendered(clientId) {
+            // Find the client
+            let client = currentClients.find(c => c.id === clientId);
+            if (!client) {
+                client = oneTimeClients.find(c => c.id === clientId);
+            }
+
+            if (client) {
+                if (!client.serviceLog) {
+                    client.serviceLog = [];
+                }
+
+                // Get current date
+                const now = new Date();
+                const month = now.toLocaleDateString('en-US', { month: 'short' })[0];
+                const day = now.getDate();
+                const dateString = `${month} ${day}`;
+
+                // Create service log entry
+                const serviceEntry = {
+                    type: 'mow',
+                    date: dateString,
+                    price: parseFloat(client.frequencyPrice || client.price || 40),
+                    timestamp: Date.now()
+                };
+
+                client.serviceLog.push(serviceEntry);
+                client.isPaid = false;
+
+                // CRITICAL: Save and refresh ALL views
+                saveToLocalStorage();
+                updateBillingList();
+
+                // Also refresh roulette if active
+                if (document.getElementById('roulette-center').offsetParent !== null) {
+                    renderRoulette();
+                }
+            }
+        }
+
+        function logExtraService(clientId, serviceName, servicePrice) {
+            // Find the client
+            let client = currentClients.find(c => c.id === clientId) || oneTimeClients.find(c => c.id === clientId);
+
+            if (client) {
+                if (!client.serviceLog) client.serviceLog = [];
+
+                // Check if this service is already logged
+                const alreadyLogged = client.serviceLog.some(service => service.type === serviceName);
+                if (alreadyLogged) return;
+
+                const now = new Date();
+                const month = now.toLocaleDateString('en-US', { month: 'short' })[0];
+                const day = now.getDate();
+                const dateString = `${month} ${day}`;
+
+                client.serviceLog.push({
+                    type: serviceName,
+                    date: dateString,
+                    price: servicePrice,
+                    timestamp: Date.now()
+                });
+
+                // Update balance - NO NEED, calculated dynamically
+                client.isPaid = false;
+
+                saveToLocalStorage();
+                updateBillingList();
+            }
+        }
+
+        // Bulk operations for selected clients
+        function toggleSelectAll(checked) {
+            const checkboxes = document.querySelectorAll('.client-checkbox');
+            checkboxes.forEach(cb => cb.checked = checked);
+        }
+
+
+
+        function bulkLogExtra() {
+            const selectedClients = getSelectedClients();
+            if (selectedClients.length === 0) {
+                alert('Please select at least one client');
+                return;
+            }
+
+            const extraName = prompt('Enter Extra Service Name (e.g., Trimming, Edging):');
+            if (!extraName || extraName.trim() === '') return;
+
+            // Find the extra service price from the first selected client's extras
+            let extraPrice = 0;
+            const firstClient = selectedClients[0];
+            const extras = firstClient.extras || [];
+            const foundExtra = extras.find(extra =>
+                (extra.serviceName || extra.name).toLowerCase() === extraName.toLowerCase()
+            );
+
+            if (foundExtra) {
+                extraPrice = foundExtra.price || foundExtra.servicePrice || 0;
+            } else {
+                // If not found, ask for price
+                const priceInput = prompt(`Enter price for ${extraName}:`);
+                extraPrice = parseFloat(priceInput) || 0;
+            }
+
+            selectedClients.forEach(client => {
+                logExtraService(client.id, extraName, extraPrice);
+            });
+        }
+
+        function bulkMarkPaid() {
+            const selectedClients = getSelectedClients();
+            if (selectedClients.length === 0) {
+                alert('Please select at least one client');
+                return;
+            }
+
+            selectedClients.forEach(client => {
+                markAsPaid(client.id);
+            });
+        }
+
+        function getSelectedClients() {
+            const checkboxes = document.querySelectorAll('.client-checkbox:checked');
+            return Array.from(checkboxes).map(cb => {
+                const clientId = cb.getAttribute('data-client-id');
+                return currentClients.find(c => c.id === clientId) ||
+                    oneTimeClients.find(c => c.id === clientId);
+            }).filter(client => client);
+        }
+
+        function markAsPaid(clientId) {
+            let client = currentClients.find(c => c.id === clientId) ||
+                oneTimeClients.find(c => c.id === clientId);
+
+            if (client) {
+                const serviceLog = client.serviceLog || [];
+                const totalAmount = serviceLog.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
+
+                if (totalAmount > 0) {
+                    // Create the record for the History/Ledger
+                    const paymentEntry = {
+                        clientId: client.id,
+                        clientName: client.name,
+                        amount: totalAmount,
+                        date: new Date().toLocaleDateString(),
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        method: 'Manual Mark Paid',
+                        note: 'Cleared via Bulk/Single Mark Paid'
+                    };
+
+                    // Push to the correct array used by your Ledger logic
+                    if (typeof paymentRecords !== 'undefined') {
+                        paymentRecords.push(paymentEntry);
+                    }
+                }
+
+                // Reset the client state
+                client.serviceLog = [];
+                client.isPaid = true;
+
+                saveToLocalStorage();
+
+                // Force refresh the specific UI lists
+                if (document.getElementById('billingSheet').classList.contains('active')) {
+                    updateBillingList();
+                }
+                if (document.getElementById('historySheet').classList.contains('active')) {
+                    updateHistoryTable();
+                }
+            }
+        }
+
+
+        // Universal Record Recall functionality
+        function setupUniversalRecordRecall() {
+            // Current Clients section
+            const currentNameInput = document.getElementById('current-name');
+            const currentAddressInput = document.getElementById('current-address');
+            const currentPhoneInput = document.getElementById('current-phone');
+            const currentFrequencySelect = document.getElementById('current-frequency');
+            const currentFrequencyPriceInput = document.getElementById('current-frequency-price');
+            const currentSpringInput = document.getElementById('current-spring');
+            const currentFallInput = document.getElementById('current-fall');
+            const currentTrimmingInput = document.getElementById('current-trimming');
+            const currentExtraPriceInput = document.getElementById('current-extra-price');
+            const currentExtraDescInput = document.getElementById('current-extra-desc');
+
+            // One-Time Clients section
+            const oneTimeNameInput = document.getElementById('onetime-name');
+            const oneTimeAddressInput = document.getElementById('onetime-address');
+
+            // Live Address Validator wiring
+            const currentAddressValidation = document.getElementById('current-address-validation');
+            const oneTimeAddressValidation = document.getElementById('onetime-address-validation');
+            const currentSaveBtn = document.getElementById('current-save-btn');
+            const oneTimeSaveBtn = document.querySelector('.one-time-save');
+
+            function updateAddressUI(inputEl, msgEl, saveBtn, defaultCityLabel) {
+                if (!inputEl || !msgEl || !saveBtn) return;
+
+                const value = inputEl.value;
+                const isValid = validateAddress(value);
+
+                // Basic message + color
+                msgEl.classList.remove('valid', 'invalid');
+
+                if (!value.trim()) {
+                    msgEl.textContent = '';
+                    saveBtn.disabled = false; // allow save enforcement to happen in handler
+                    return;
+                }
+
+                if (!isValid) {
+                    msgEl.textContent = '❌ Need house number and street name (e.g., 123 Main St)';
+                    msgEl.classList.add('invalid');
+                    saveBtn.disabled = true;
+                } else {
+                    // Auto-formatting suggestion: if no comma/city/zip present
+                    let suggestion = '✅ Address format looks good';
+                    const hasComma = /,/.test(value);
+                    const hasZip = /\d{5}(-\d{4})?$/.test(value);
+
+                    if (!hasComma && !hasZip) {
+                        const trimmed = value.trim();
+                        suggestion = `✅ Address format looks good. Did you mean "${trimmed}, ${defaultCityLabel}"?`;
+                    }
+
+                    msgEl.textContent = suggestion;
+                    msgEl.classList.add('valid');
+                    saveBtn.disabled = false;
+                }
+            }
+
+            if (currentAddressInput && currentAddressValidation && currentSaveBtn) {
+                currentAddressInput.addEventListener('input', () => {
+                    updateAddressUI(currentAddressInput, currentAddressValidation, currentSaveBtn, 'Queens, NY');
+                });
+            }
+
+            if (oneTimeAddressInput && oneTimeAddressValidation && oneTimeSaveBtn) {
+                oneTimeAddressInput.addEventListener('input', () => {
+                    updateAddressUI(oneTimeAddressInput, oneTimeAddressValidation, oneTimeSaveBtn, 'Queens, NY');
+                });
+            }
+            const oneTimeServiceInput = document.getElementById('onetime-service');
+            const oneTimePriceInput = document.getElementById('onetime-price');
+            const oneTimeCommentsInput = document.getElementById('onetime-comments');
+
+            // Function to find client by name from all clients
+            function findClientByName(nameValue) {
+                // First check Current Clients
+                const currentMatch = currentClients.find(client =>
+                    client.name.toLowerCase() === nameValue.toLowerCase()
+                );
+                if (currentMatch) {
+                    return { client: currentMatch, type: 'current' };
+                }
+
+                // Then check One-Time Clients
+                const oneTimeMatch = oneTimeClients.find(client =>
+                    client.name.toLowerCase() === nameValue.toLowerCase()
+                );
+                if (oneTimeMatch) {
+                    return { client: oneTimeMatch, type: 'onetime' };
+                }
+
+                return null;
+            }
+
+            // Current Clients name input handler
+            currentNameInput.addEventListener('input', function () {
+                const nameValue = this.value.trim();
+                if (nameValue.length === 0) {
+                    // Clear all Current Client fields if name is empty
+                    currentAddressInput.value = '';
+                    currentPhoneInput.value = '';
+                    currentFrequencySelect.value = '';
+                    currentFrequencyPriceInput.value = '';
+                    document.getElementById('current-extras-container').innerHTML = '';
+                    // Add one empty extra service pair
+                    addExtraServiceItem('current');
+                    currentEditingId = null;
+                    return;
+                }
+
+                const match = findClientByName(nameValue);
+                if (match) {
+                    const client = match.client;
+
+                    // Fill ALL Current Client fields with client data
+                    if (match.type === 'current') {
+                        currentEditingId = client.id;
+                        currentAddressInput.value = client.address || '';
+                        currentPhoneInput.value = client.phone || '';
+                        currentFrequencySelect.value = client.frequency || '';
+                        currentFrequencyPriceInput.value = client.frequencyPrice || '';
+
+                        // Clear and populate extras
+                        const extrasContainer = document.getElementById('current-extras-container');
+                        extrasContainer.innerHTML = '';
+                        const clientExtras = client.extras || [];
+                        if (clientExtras.length === 0) {
+                            // Add one empty extra service pair if no extras
+                            addExtraServiceItem('current');
+                        } else {
+                            // Populate existing extras
+                            clientExtras.forEach(extra => {
+                                addExtraServiceItem('current', extra.serviceName || extra.description, extra.price);
+                            });
+                        }
+                    } else if (match.type === 'onetime') {
+                        // Convert One-Time client data to Current Client format
+                        currentEditingId = null; // Don't set editing ID for cross-type
+                        currentAddressInput.value = client.address || '';
+                        currentPhoneInput.value = ''; // One-Time doesn't have separate phone
+                        currentFrequencySelect.value = '';
+                        currentFrequencyPriceInput.value = client.price || ''; // Use One-Time price as frequency price
+
+                        // Clear extras for cross-type
+                        document.getElementById('current-extras-container').innerHTML = '';
+                    }
+                } else {
+                    currentEditingId = null;
+                }
+            });
+
+            // One-Time Clients name input handler
+            oneTimeNameInput.addEventListener('input', function () {
+                const nameValue = this.value.trim();
+                if (nameValue.length === 0) {
+                    // Clear all One-Time Client fields if name is empty
+                    oneTimeAddressInput.value = '';
+                    oneTimeServiceInput.value = '';
+                    oneTimePriceInput.value = '';
+                    oneTimeCommentsInput.value = '';
+                    oneTimeEditingId = null;
+                    return;
+                }
+
+                const match = findClientByName(nameValue);
+                if (match) {
+                    const client = match.client;
+
+                    // Fill ALL One-Time Client fields with client data
+                    if (match.type === 'onetime') {
+                        oneTimeEditingId = client.id;
+                        oneTimeAddressInput.value = client.address || '';
+                        oneTimeServiceInput.value = client.service || '';
+                        oneTimePriceInput.value = client.price || '';
+                        oneTimeCommentsInput.value = client.comments || '';
+                    } else if (match.type === 'current') {
+                        // Convert Current client data to One-Time format
+                        oneTimeEditingId = null; // Don't set editing ID for cross-type
+                        oneTimeAddressInput.value = client.address || '';
+                        oneTimeServiceInput.value = client.frequency || 'Lawn Service'; // Use frequency as service
+                        oneTimePriceInput.value = client.frequencyPrice || '';
+                        // Build comments from extras
+                        let comments = `Phone: ${client.phone || ''}`;
+                        if (client.extras && client.extras.length > 0) {
+                            client.extras.forEach(extra => {
+                                const serviceName = extra.serviceName || extra.description || 'Extra Service';
+                                comments += `, ${serviceName}: $${extra.price}`;
+                            });
+                        }
+                        oneTimeCommentsInput.value = comments;
+                    }
+                } else {
+                    oneTimeEditingId = null;
+                }
+            });
+        }
+
+        // Load saved data from LocalStorage on page load
+        loadFromLocalStorage();
+
+        // Add extra service item to form
+        function addExtraServiceItem(formType, serviceName = '', price = '') {
+            const container = document.getElementById(`${formType}-extras-container`);
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'extra-service-item';
+
+            // Start with just the service description input
+            const initialHTML = `
+                <input type="text" class="extra-service-input" placeholder="Service Description" value="${serviceName}" onblur="showPriceInput(this)" onkeydown="handleServiceEnter(event, this)">
+                <button type="button" class="remove-extra-btn" onclick="removeExtraService(this)">×</button>
+            `;
+
+            // If we have both service name and price, show both inputs
+            const fullHTML = serviceName && price ? `
+                <input type="text" class="extra-service-input" placeholder="Service Description" value="${serviceName}">
+                <input type="number" class="extra-price-input" placeholder="Price" value="${price}" step="0.01" min="0">
+                <button type="button" class="remove-extra-btn" onclick="removeExtraService(this)">×</button>
+            ` : initialHTML;
+
+            itemDiv.innerHTML = fullHTML;
+            container.appendChild(itemDiv);
+        }
+
+        // Show price input when service description loses focus or Enter is pressed
+        function showPriceInput(serviceInput) {
+            const itemDiv = serviceInput.parentElement;
+            const serviceValue = serviceInput.value.trim();
+
+            if (serviceValue && !itemDiv.querySelector('.extra-price-input')) {
+                // Add the price input after the service input
+                const priceInput = document.createElement('input');
+                priceInput.type = 'number';
+                priceInput.className = 'extra-price-input';
+                priceInput.placeholder = 'Price';
+                priceInput.step = '0.01';
+                priceInput.min = '0';
+                priceInput.required = true;
+
+                // Insert the price input after the service input
+                serviceInput.insertAdjacentElement('afterend', priceInput);
+            }
+        }
+
+        // Handle Enter key in service description
+        function handleServiceEnter(event, serviceInput) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                showPriceInput(serviceInput);
+                // Focus on the price input if it exists
+                const priceInput = serviceInput.parentElement.querySelector('.extra-price-input');
+                if (priceInput) {
+                    priceInput.focus();
+                }
+            }
+        }
+
+        // Handle Enter key in extra description
+        function handleExtraEnter(event, input) {
+            if (event.key === 'Enter') {
+                const priceInput = input.parentElement.querySelector('.extra-price-input');
+                priceInput.focus();
+            }
+        }
+
+        // Remove extra service item
+        function removeExtraService(button) {
+            button.parentElement.remove();
+        }
+
+        // Add extra service (called by + button)
+        function addExtraService(formType) {
+            addExtraServiceItem(formType);
+            // Focus on the new description input
+            const container = document.getElementById(`${formType}-extras-container`);
+            const newDescInput = container.lastElementChild.querySelector('.extra-desc-input');
+            newDescInput.focus();
+        }
+
+        // Initialize form with empty extra service pair
+        function initializeForms() {
+            // Add one empty extra service pair to current client form
+            addExtraServiceItem('current');
+        }
+
+        // Load saved data from LocalStorage on page load
+        loadFromLocalStorage();
+
+        // Backup and Restore functions
+        function backupData() {
+            try {
+                const backupData = {
+                    currentClients: currentClients,
+                    oneTimeClients: oneTimeClients,
+                    backupDate: new Date().toISOString(),
+                    version: "1.0"
+                };
+
+                const dataStr = JSON.stringify(backupData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+                // Format date as Mon_DD_YYYY
+                const now = new Date();
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthName = months[now.getMonth()];
+                const day = now.getDate();
+                const year = now.getFullYear();
+                const formattedDate = `${monthName}_${day}_${year}`;
+
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `LawnCare_Backup_${formattedDate}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                alert('Backup completed successfully!');
+            } catch (error) {
+                console.error('Backup failed:', error);
+                alert('Backup failed. Please try again.');
+            }
+        }
+
+        function restoreData() {
+            const fileInput = document.getElementById('restore-file');
+            fileInput.click();
+
+            fileInput.onchange = function (event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const backupData = JSON.parse(e.target.result);
+
+                        // Validate backup data structure
+                        if (!backupData.currentClients || !backupData.oneTimeClients) {
+                            throw new Error('Invalid backup file format');
+                        }
+
+                        // Safety confirmation
+                        if (!confirm('This will replace your current list. Are you sure you want to restore from this backup?')) {
+                            return;
+                        }
+
+                        // Restore the data
+                        currentClients = backupData.currentClients || [];
+                        oneTimeClients = backupData.oneTimeClients || [];
+
+                        // Ensure all clients have required properties
+                        // Migrate from servicesRendered to serviceLog
+                        currentClients.forEach(client => {
+                            if (!client.extras) client.extras = [];
+                            if (client.isPaid === undefined) client.isPaid = false;
+
+                            // Migrate servicesRendered to serviceLog
+                            if (client.servicesRendered && !client.serviceLog) {
+                                client.serviceLog = [];
+                                // Create mock service entries based on count
+                                for (let i = 0; i < client.servicesRendered; i++) {
+                                    client.serviceLog.push({
+                                        type: 'mow',
+                                        date: 'Migrated',
+                                        price: client.frequencyPrice || 0
+                                    });
+                                }
+                                delete client.servicesRendered; // Remove old field
+                            } else if (!client.serviceLog) {
+                                client.serviceLog = [];
+                            }
+                        });
+
+                        oneTimeClients.forEach(client => {
+                            if (client.isPaid === undefined) client.isPaid = false;
+
+                            // Migrate servicesRendered to serviceLog
+                            if (client.servicesRendered && !client.serviceLog) {
+                                client.serviceLog = [];
+                                // Create mock service entries based on count
+                                for (let i = 0; i < client.servicesRendered; i++) {
+                                    client.serviceLog.push({
+                                        type: 'service',
+                                        date: 'Migrated',
+                                        price: client.price || 0
+                                    });
+                                }
+                                delete client.servicesRendered; // Remove old field
+                            } else if (!client.serviceLog) {
+                                client.serviceLog = [];
+                            }
+                        });
+
+                        // Save to LocalStorage
+                        saveToLocalStorage();
+
+                        // Refresh all displays
+                        if (document.getElementById('clientListSheet').classList.contains('active')) {
+                            updateClientList();
+                        }
+                        if (document.getElementById('billingSheet').classList.contains('active')) {
+                            updateBillingList();
+                        }
+
+                        alert('Data Restored Successfully!');
+                    } catch (error) {
+                        console.error('Restore failed:', error);
+                        alert('Restore failed. Please check that the file is a valid backup.');
+                    }
+                };
+
+                reader.readAsText(file);
+                // Clear the file input
+                fileInput.value = '';
+            };
+        }
+
+        // Focus the hidden name input field
+        function focusNameInput() {
+            const nameInput = document.getElementById('current-name');
+            nameInput.focus();
+        }
+
+
+
+        function toggleHistorySheet() {
+            const historySheet = document.getElementById('historySheet');
+            if (historySheet.classList.contains('active')) {
+                historySheet.classList.remove('active');
+            } else {
+                closeAllSheets();
+                historySheet.classList.add('active');
+                populateClientFilter();
+                updateHistoryTable();
+            }
+        }
+
+        function populateClientFilter() {
+            const filterSelect = document.getElementById('history-client-filter');
+            const currentOptions = filterSelect.querySelectorAll('option:not([value=""])');
+
+            // Clear existing client options (but keep the "Select a Client" option)
+            currentOptions.forEach(option => option.remove());
+
+            // Get all unique clients
+            const clientMap = new Map(); // Maps clientId to client object
+
+            // Add current clients
+            currentClients.forEach(client => {
+                if (!clientMap.has(client.id)) {
+                    clientMap.set(client.id, client);
+                }
+            });
+
+            // Add one-time clients
+            oneTimeClients.forEach(client => {
+                if (!clientMap.has(client.id)) {
+                    clientMap.set(client.id, client);
+                }
+            });
+
+            // Sort by name and add to dropdown
+            Array.from(clientMap.values())
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                .forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.id;
+                    option.textContent = client.name;
+                    filterSelect.appendChild(option);
+                });
+        }
+
+        // Initialize forms and Universal Record Recall
+        initializeForms();
+        setupUniversalRecordRecall();
+    </script>
+
+    <!-- Direct Typewriter Mode -->
+    <script>
+        let typedText = "";
+        let locationCheckDone = false;
+
+        // STEP 1: Check location and show client
+        // ===== GEOCODING CACHE AND SYSTEM =====
+        const geocodeCache = new Map();
+        const GEOCODE_DELAY_MS = 1100; // Nominatim requests min 1 per second
+
+        // Robust geocoding function (direct Nominatim call with email parameter)
+        // Robust geocoding function (Photon first, Nominatim fallback)
+        async function geocodeAddress(address) {
+            if (!address) return null;
+
+            // Check cache first
+            if (geocodeCache.has(address)) {
+                console.log(`  [CACHE HIT] ${address}`);
+                return geocodeCache.get(address);
+            }
+
+            console.log(`🌐 Attempting to geocode: ${address}`);
+
+            // === STRATEGY 1: Photon API (Fast, OpenStreetMap based) ===
+            try {
+                // Photon usually takes "City, State" context well, but raw address is fine too
+                const encodedAddr = encodeURIComponent(address);
+                const photonUrl = `https://photon.komoot.io/api/?q=${encodedAddr}&limit=1&lang=en`;
+
+                console.log(`[Photon] Requesting: ${photonUrl}`);
+                const response = await fetch(photonUrl);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.features && data.features.length > 0) {
+                        const geometry = data.features[0].geometry;
+                        if (geometry && geometry.coordinates) {
+                            const [lon, lat] = geometry.coordinates; // Photon returns [lon, lat]
+                            const coords = { lat: parseFloat(lat), lon: parseFloat(lon) };
+
+                            geocodeCache.set(address, coords);
+                            console.log(`✅ [Photon] SUCCESS: ${coords.lat}, ${coords.lon}`);
+                            return coords;
+                        }
+                    } else {
+                        console.log(`[Photon] No results found.`);
+                    }
+                } else {
+                    console.log(`[Photon] Failed with status: ${response.status}`);
+                }
+            } catch (photonError) {
+                console.warn(`[Photon] Error: ${photonError.message}`);
+                // Continue to fallback...
+            }
+
+
+            // === STRATEGY 2: Nominatim Fallback (Slower, rate limited) ===
+            console.log(`⚠️ Falling back to Nominatim...`);
+
+            // Try multiple address formats for better results
+            const addressFormats = [
+                address,
+                address.replace(/\bSt\b/gi, 'Street'),
+                address.replace(/\bAve\b/gi, 'Avenue'),
+                address.replace(/\bRd\b/gi, 'Road'),
+                address.replace(/\bBlvd\b/gi, 'Boulevard'),
+                address.replace(/\bDr\b/gi, 'Drive'),
+            ];
+
+            // Try each address format directly against Nominatim
+            for (let i = 0; i < addressFormats.length; i++) {
+                try {
+                    const addr = addressFormats[i];
+                    console.log(`[Nominatim] Trying: ${addr}`);
+
+                    // Wait for rate limiting (essential for Nominatim)
+                    if (i > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1200));
+                    }
+
+                    // Build Nominatim URL with contact email (as required by usage policy)
+                    const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&countrycodes=us&limit=1&email=lawncareapp@example.com`;
+
+                    // Direct fetch to Nominatim
+                    const response = await fetch(nominatimUrl);
+
+                    if (!response.ok) {
+                        console.log(`[Nominatim] Response status: ${response.status}`);
+                        continue;
+                    }
+
+                    const results = await response.json();
+
+                    if (results && Array.isArray(results) && results.length > 0) {
+                        const coords = {
+                            lat: parseFloat(results[0].lat),
+                            lon: parseFloat(results[0].lon)
+                        };
+                        geocodeCache.set(address, coords);
+                        console.log(`✅ [Nominatim] SUCCESS: ${coords.lat}, ${coords.lon}`);
+                        return coords;
+                    }
+                } catch (error) {
+                    console.log(`[Nominatim] Error: ${error.message}`);
+                }
+            }
+
+            console.log(`❌ All geocoding attempts failed`);
+            return null;
+        }
+
+        // VISUAL: Render user + nearby clients into the sky background
+        function renderSkyVisuals(userLat, userLon, nearbyClients) {
+            const sky = document.querySelector('.sky-background');
+            if (!sky) return;
+
+            // Clear previous visuals
+            sky.innerHTML = '';
+
+            // Ensure sky is a positioned container
+            sky.style.position = sky.style.position || 'fixed';
+            sky.style.top = sky.style.top || '0';
+            sky.style.left = sky.style.left || '0';
+            sky.style.width = sky.style.width || '100%';
+            sky.style.height = sky.style.height || '100%';
+            sky.style.pointerEvents = 'none';
+
+            // Add user dash at center
+            const userDash = document.createElement('div');
+            userDash.className = 'user-dash flashing-dash';
+            userDash.style.position = 'absolute';
+            userDash.style.top = '50%';
+            userDash.style.left = '50%';
+            userDash.style.transform = 'translate(-50%, -50%)';
+            userDash.style.width = '60px';
+            userDash.style.height = '6px';
+            userDash.style.background = '#ffffff';
+            userDash.style.borderRadius = '3px';
+            userDash.style.boxShadow = '0 0 15px rgba(255,255,255,0.8)';
+            userDash.style.zIndex = '3';
+            sky.appendChild(userDash);
+
+            // Scale: 0.001 degrees ~ 100px
+            const SCALE = 100 / 0.001; // 100000
+
+            let closestClient = null;
+            let closestDistance = Infinity;
+
+            (nearbyClients || []).forEach(client => {
+                if (typeof client.lat !== 'number' || typeof client.lon !== 'number') return;
+
+                // Track closest client by distance (if distance is available)
+                if (typeof client.distance === 'number' && client.distance < closestDistance) {
+                    closestDistance = client.distance;
+                    closestClient = client;
+                }
+
+                const dLat = client.lat - userLat;
+                const dLon = client.lon - userLon;
+
+                const offsetX = dLon * SCALE;
+                const offsetY = -dLat * SCALE; // invert so north is up
+
+                const dot = document.createElement('div');
+                dot.className = 'client-dot';
+                dot.style.position = 'absolute';
+                dot.style.width = '12px';
+                dot.style.height = '12px';
+                dot.style.borderRadius = '50%';
+                dot.style.background = '#ffeb3b';
+                dot.style.boxShadow = '0 0 12px rgba(255,235,59,0.9)';
+                dot.style.left = `calc(50% + ${offsetX}px)`;
+                dot.style.top = `calc(50% + ${offsetY}px)`;
+                dot.style.transform = 'translate(-50%, -50%)';
+                dot.style.zIndex = '2';
+
+                sky.appendChild(dot);
+            });
+
+            // If a client is within 30 meters, show their name in huge text
+            if (closestClient && closestDistance <= 30) {
+                const nameBanner = document.createElement('div');
+                nameBanner.className = 'nearby-client-banner';
+                nameBanner.style.position = 'absolute';
+                nameBanner.style.top = '50%';
+                nameBanner.style.left = '50%';
+                nameBanner.style.transform = 'translate(-50%, -50%)';
+                nameBanner.style.fontSize = '80px';
+                nameBanner.style.fontWeight = 'bold';
+                nameBanner.style.color = '#ffffff';
+                nameBanner.style.textShadow = '4px 4px 18px rgba(0,0,0,0.9)';
+                nameBanner.style.zIndex = '4';
+                nameBanner.style.whiteSpace = 'nowrap';
+                nameBanner.textContent = closestClient.name || 'Nearby Client';
+
+                sky.appendChild(nameBanner);
+            }
+        }
+
+        // Check nearby clients function
+        async function checkNearbyClients() {
+            console.log('=== CHECKING NEARBY CLIENTS ===');
+
+            const allClients = [...currentClients, ...oneTimeClients];
+            console.log(`Total clients: ${allClients.length}`);
+
+            if (allClients.length === 0) {
+                console.log('No clients in system');
+                return;
+            }
+
+            // Get user's location
+            if (!navigator.geolocation) {
+                console.error('Geolocation not supported');
+                return;
+            }
+
+            console.log('Requesting user location...');
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+
+                    console.log(`✓ User GPS: ${userLat.toFixed(4)}, ${userLon.toFixed(4)} (±${accuracy.toFixed(0)}m)`);
+
+                    const nearbyClients = [];
+                    const DISTANCE_THRESHOLD = 500; // meters
+
+
+                    // Try to derive user's street name from OpenCage (if available) for fallback
+                    let userStreetNormalized = currentDetectedStreet;
+                    let userStreetSimple = userStreetNormalized ? userStreetNormalized.toLowerCase().trim() : '';
+
+
+                    for (let client of allClients) {
+                        if (!client.address) {
+                            console.log(`⊘ ${client.name}: No address`);
+                            continue;
+                        }
+
+                        // SHORTCUT: Street-First Match
+                        // If we know the user's street, check for a direct text match properly
+                        if (userStreetSimple) {
+                            const clientStreetSimple = extractStreetFromAddress(client.address).toLowerCase().trim();
+
+                            // ROBUST MATCH: Check for inclusion in either direction to handle "95th" vs "95th St"
+                            if (clientStreetSimple && (clientStreetSimple.includes(userStreetSimple) || userStreetSimple.includes(clientStreetSimple))) {
+                                console.log(`✓ MATCH FOUND (Street-First): ${client.name} (${clientStreetSimple} ~= ${userStreetSimple})`);
+                                // Synthetic "nearby" result
+                                nearbyClients.push({ ...client, distance: 10, lat: userLat, lon: userLon });
+                                continue; // SKIP geocoding/GPS math
+                            }
+                        }
+
+                        console.log(`Checking ${client.name}...`);
+                        let clientLat = null;
+                        let clientLon = null;
+
+                        // PRIORITY 1: Use stored GPS coordinates
+                        if (client.gpsLat && client.gpsLon) {
+                            clientLat = parseFloat(client.gpsLat);
+                            clientLon = parseFloat(client.gpsLon);
+                            console.log(`  [STORED GPS] ${clientLat.toFixed(4)}, ${clientLon.toFixed(4)}`);
+                        } else {
+                            // PRIORITY 2: Geocode the address
+                            const geoResult = await geocodeAddress(client.address);
+
+                            if (geoResult) {
+                                clientLat = geoResult.lat;
+                                clientLon = geoResult.lon;
+
+                                // Save geocoded coordinates to client for future use
+                                if (currentClients.includes(client)) {
+                                    client.gpsLat = clientLat;
+                                    client.gpsLon = clientLon;
+                                } else {
+                                    client.gpsLat = clientLat;
+                                    client.gpsLon = clientLon;
+                                }
+                                saveToLocalStorage();
+                                console.log(`  [GEOCODED & SAVED] ${clientLat.toFixed(4)}, ${clientLon.toFixed(4)}`);
+                            } else {
+                                console.log(`  ✗ Could not geocode, attempting street-based fallback...`);
+
+                                // Emergency fallback: if user's street is known and client's address contains same street,
+                                // treat client as nearby with synthetic small distance.
+                                try {
+                                    if (!userStreetNormalized && typeof normalizeStreetName === 'function') {
+                                        // Try to approximate user's street from their own GPS-derived road name
+                                        // using the existing OpenCage helper if it already ran.
+                                        console.log('  (Fallback) User street not set; relying on banner detection logic only.');
+                                    }
+
+                                    if (userStreetSimple) {
+                                        const clientStreetSimple = extractStreetFromAddress(client.address || '').toLowerCase().trim();
+                                        // Use ROBUST match for fallback too
+                                        if (clientStreetSimple && (clientStreetSimple.includes(userStreetSimple) || userStreetSimple.includes(clientStreetSimple))) {
+                                            console.log('✓ MATCH FOUND (Fallback):', client.name);
+                                            nearbyClients.push({ ...client, distance: 10, lat: userLat, lon: userLon });
+                                            continue;
+                                        }
+                                    }
+                                } catch (fallbackError) {
+                                    console.log('  Street-based fallback failed:', fallbackError.message);
+                                }
+
+                                continue;
+                            }
+                        }
+
+                        // Calculate distance
+                        const distance = calculateDistance(userLat, userLon, clientLat, clientLon);
+                        console.log(`  Distance: ${distance.toFixed(0)}m`);
+
+                        // Check if nearby
+                        if (distance < DISTANCE_THRESHOLD) {
+                            nearbyClients.push({ ...client, distance });
+                            console.log(`  ✓ NEARBY!`);
+                        } else {
+                            console.log(`  ✗ Too far`);
+                        }
+
+                        // Rate limiting between clients
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    // Display results
+                    console.log(`=== RESULTS: ${nearbyClients.length} nearby ===`);
+                    if (nearbyClients.length > 0) {
+                        // displayNearbyClientsOnScreen(nearbyClients); // Old typewriter
+                        // Use Roulette logic if user is on known street, OR fallback
+                        displayNearbyClients(nearbyClients);
+                    }
+
+                    // Always update sky visuals (even if list is empty, to clear old dots)
+                    renderSkyVisuals(userLat, userLon, nearbyClients);
+                },
+                (error) => {
+                    let message = 'Geolocation error';
+                    if (error.code === 1) message = 'Location permission denied';
+                    else if (error.code === 2) message = 'Position unavailable';
+                    else if (error.code === 3) message = 'Request timeout';
+
+                    console.error(`✗ ${message} (${error.code})`);
+                    alert(`Location Error: ${message}. Please allow location access and try again.`);
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+
+
+        // Calculate distance between two GPS coordinates in meters
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth's radius in meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Distance in meters
+        }
+
+        // HELPER: Manually set GPS coordinates for a client (useful if geocoding fails)
+        // Usage: setClientGPS('Carlos', 40.7234, -73.8812)
+        function setClientGPS(clientName, lat, lon) {
+            let client = currentClients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) ||
+                oneTimeClients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+
+            if (client) {
+                client.gpsLat = lat;
+                client.gpsLon = lon;
+                saveToLocalStorage();
+                console.log(`✓ Set GPS for ${client.name}: ${lat}, ${lon}`);
+            } else {
+                console.error(`Client "${clientName}" not found`);
+            }
+        }
+
+        // DISPLAY: Show all nearby clients on the sky with color coding
+        function displayNearbyClientsOnScreen(nearbyClients) {
+            console.log(`Displaying ${nearbyClients.length} nearby client(s) on screen`);
+
+            const typewriterLayer = document.getElementById('typewriter-layer');
+
+            // Clear existing client displays (but keep the typewriter text element)
+            const existingClientLabels = typewriterLayer.querySelectorAll('.client-label');
+            existingClientLabels.forEach(label => label.remove());
+
+            // Display each nearby client with color coding based on balance
+            nearbyClients.forEach((client, index) => {
+                // Calculate balance for this client
+                let totalServices = (client.serviceLog || []).reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
+
+                paymentHistory.forEach(entry => {
+                    if (entry.name === client.name) {
+                        totalServices += parseFloat(entry.amount || 0);
+                    }
+                });
+
+                let totalPayments = paymentRecords.reduce((sum, record) => {
+                    if (record.clientId === client.id) {
+                        sum += parseFloat(record.amount || 0);
+                    }
+                    return sum;
+                }, 0);
+
+                const balance = totalServices - totalPayments;
+
+                const distanceValue = typeof client.distance === 'number' ? client.distance : NaN;
+                console.log(`  ${client.name}: Balance = $${balance.toFixed(2)} (${isNaN(distanceValue) ? 'fallback' : distanceValue.toFixed(0) + 'm'} away)`);
+
+                // Determine color based on balance
+                const displayColor = balance > 0 ? '#e74c3c' : 'white'; // Red if owe money, white if paid up
+
+                // Create a label element for this client
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'client-label';
+                // Full-width, centered, large white text for maximum visibility
+                labelDiv.style.position = 'absolute';
+                labelDiv.style.top = (20 + (index * 15)) + '%';
+                labelDiv.style.left = '0';
+                labelDiv.style.width = '100%';
+                labelDiv.style.textAlign = 'center';
+                labelDiv.style.color = 'white';
+                labelDiv.style.fontSize = '90px';
+                labelDiv.style.fontWeight = '900';
+                labelDiv.style.textShadow = '4px 4px 15px black';
+                labelDiv.style.zIndex = '10';
+                labelDiv.style.pointerEvents = 'none';
+
+                labelDiv.innerText = client.name;
+
+                typewriterLayer.appendChild(labelDiv);
+            });
+        }
+
+        // ===== DIAGNOSTIC FUNCTIONS =====
+
+        // Test current user location
+        async function testUserLocation() {
+            console.log('=== TESTING USER LOCATION ===');
+            const resultDiv = document.getElementById('diagnostics-location-result');
+
+            if (!navigator.geolocation) {
+                resultDiv.innerHTML = '<p style="color:red;">✗ Geolocation not supported</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p>Getting location...</p>';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    const mapsLink = `https://www.google.com/maps/@${lat},${lon},18z`;
+
+                    resultDiv.innerHTML = `
+                        <p><strong>✓ Location Found!</strong></p>
+                        <p>Latitude: <code>${lat.toFixed(6)}</code></p>
+                        <p>Longitude: <code>${lon.toFixed(6)}</code></p>
+                        <p>Accuracy: ±${accuracy.toFixed(0)} meters</p>
+                        <p><a href="${mapsLink}" target="_blank">View on Google Maps</a></p>
+                    `;
+                    console.log(`✓ Location: ${lat.toFixed(6)}, ${lon.toFixed(6)} (±${accuracy.toFixed(0)}m)`);
+                },
+                (error) => {
+                    const messages = {
+                        1: 'Permission denied - allow location access in browser settings',
+                        2: 'Position unavailable - check GPS signal',
+                        3: 'Request timeout - try again'
+                    };
+                    resultDiv.innerHTML = `<p style="color:red;">✗ ${messages[error.code] || 'Unknown error'}</p>`;
+                    console.error(`✗ Geolocation error: ${error.message}`);
+                }
+            );
+        }
+
+        // Test address geocoding
+        async function testGeocoding() {
+            console.log('=== TESTING GEOCODING ===');
+            const input = document.getElementById('diagnostics-address-input');
+            const resultDiv = document.getElementById('diagnostics-geocode-result');
+            const address = input.value.trim();
+
+            if (!address) {
+                resultDiv.innerHTML = '<p style="color:orange;">Enter an address to test</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p>Geocoding...</p>';
+            console.log(`Testing address: ${address}`);
+
+            const result = await geocodeAddress(address);
+
+            if (result) {
+                const mapsLink = `https://www.google.com/maps/@${result.lat},${result.lon},18z`;
+                resultDiv.innerHTML = `
+                    <p><strong>✓ Geocoding Success!</strong></p>
+                    <p>Address: <code>${address}</code></p>
+                    <p>Latitude: <code>${result.lat.toFixed(6)}</code></p>
+                    <p>Longitude: <code>${result.lon.toFixed(6)}</code></p>
+                    <p><a href="${mapsLink}" target="_blank">View on Google Maps</a></p>
+                `;
+                console.log(`✓ Geocoded: ${result.lat}, ${result.lon}`);
+            } else {
+                resultDiv.innerHTML = `
+                    <p style="color:red;"><strong>✗ Could not geocode: ${address}</strong></p>
+                    <p style="font-size:0.9em;"><strong>Manual Method:</strong></p>
+                    <ol style="font-size:0.9em;">
+                        <li>Go to <a href="https://www.google.com/maps" target="_blank">Google Maps</a></li>
+                        <li>Search for: <code>${address}</code></li>
+                        <li>Right-click the location pin</li>
+                        <li>Copy the coordinates from the popup</li>
+                        <li>Format: <code>40.7128, -74.0060</code> (comma-separated)</li>
+                    </ol>
+                    <p style="font-size:0.9em; color:#666;"><em>Then enter these coordinates when adding or editing a client.</em></p>
+                `;
+                console.error(`✗ Geocoding failed for: ${address}`);
+            }
+        }
+
+        // Check all clients' GPS status
+        async function checkAllClientsGPS() {
+            console.log('=== CHECKING ALL CLIENTS GPS ===');
+            const resultDiv = document.getElementById('diagnostics-clients-result');
+            const allClients = [...currentClients, ...oneTimeClients];
+
+            if (allClients.length === 0) {
+                resultDiv.innerHTML = '<p>No clients in system</p>';
+                return;
+            }
+
+            let html = '<h4>Client GPS Status</h4><table style="width:100%; border-collapse:collapse;">';
+            html += '<tr style="background:#f0f0f0;"><th style="border:1px solid #ddd; padding:8px;">Name</th><th style="border:1px solid #ddd; padding:8px;">GPS</th><th style="border:1px solid #ddd; padding:8px;">Address</th></tr>';
+
+            for (let client of allClients) {
+                const hasGPS = client.gpsLat && client.gpsLon ? '✓ Yes' : '✗ No';
+                const gpsColor = client.gpsLat && client.gpsLon ? 'green' : 'red';
+                const row = `<tr>
+                    <td style="border:1px solid #ddd; padding:8px;">${client.name}</td>
+                    <td style="border:1px solid #ddd; padding:8px; color:${gpsColor};">${hasGPS}</td>
+                    <td style="border:1px solid #ddd; padding:8px; font-size:12px;">${client.address}</td>
+                </tr>`;
+                html += row;
+            }
+            html += '</table>';
+
+            resultDiv.innerHTML = html;
+            console.log(`Checked ${allClients.length} clients`);
+        }
+
+        // STEP 3: Keyboard typing for search
+        window.addEventListener('keydown', (e) => {
+            // Don't capture if sheet is open OR typing in form field
+            if (document.querySelector('.sheet.active') ||
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
+                e.target.tagName === 'SELECT') {
+                return;
+            }
+
+            const textElement = document.getElementById('typewriter-text');
+            const cursorElement = document.getElementById('typewriter-cursor');
+
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                // Type character
+                typedText += e.key;
+                textElement.innerText = typedText;
+                textElement.style.color = 'white';
+                textElement.style.fontSize = '100px';
+                cursorElement.style.display = "none";
+            } else if (e.key === 'Backspace') {
+                e.preventDefault();
+                typedText = typedText.slice(0, -1);
+                textElement.innerText = typedText;
+                cursorElement.style.display = typedText.length > 0 ? "none" : "inline-block";
+            } else if (e.key === 'Enter' && typedText.trim() !== '') {
+                const searchName = typedText.trim().toLowerCase();
+                const foundClient = [...currentClients, ...oneTimeClients].find(
+                    client => client.name.toLowerCase() === searchName
+                );
+
+                if (foundClient) {
+                    // Existing → Triangle (Billing)
+                    closeAllSheets();
+                    document.getElementById('billingSheet').classList.add('active');
+                    updateBillingList();
+
+                    setTimeout(() => {
+                        document.querySelectorAll('.client-checkbox').forEach(cb => {
+                            if (cb.getAttribute('data-client-id') === foundClient.id) {
+                                cb.checked = true;
+                            }
+                        });
+                    }, 200);
+                } else {
+                    // New → Circle (Entry)
+                    closeAllSheets();
+                    document.getElementById('clientSheet').classList.add('active');
+
+                    setTimeout(() => {
+                        document.getElementById('current-name').value = typedText;
+                        document.getElementById('current-address').focus();
+                    }, 200);
+                }
+
+                typedText = "";
+                textElement.innerText = "";
+                cursorElement.style.display = "inline-block";
+            } else if (e.key === 'Escape') {
+                typedText = "";
+                textElement.innerText = "";
+                cursorElement.style.display = "inline-block";
+            }
+        });
+
+        // STEP 4: Run location check on page load
+
+
+        // ===== NEARBY CLIENTS BANNER FEATURE =====
+        // Initialize geolocation on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, requesting geolocation...');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        console.log(`Got location: ${lat}, ${lon}`);
+                        fetchUserStreetAndShowClients(lat, lon);
+                    },
+                    (error) => {
+                        console.warn('Geolocation denied or unavailable:', error.message);
+                        hideNearbyClientsBanner();
+                    }
+                );
+            } else {
+                console.warn('Geolocation not supported');
+                hideNearbyClientsBanner();
+            }
+        });
+
+        // Helper: normalize street names for comparison
+        function normalizeStreetName(street) {
+            if (!street) return '';
+            return street
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, ' ')  // Remove extra spaces
+                .replace(/\bstreet\b/gi, 'st')
+                .replace(/\bavenue\b/gi, 'ave')
+                .replace(/\broad\b/gi, 'rd')
+                .replace(/\bdrive\b/gi, 'dr')
+                .replace(/\blane\b/gi, 'ln')
+                .replace(/\bcircle\b/gi, 'cir')
+                .replace(/\bcourt\b/gi, 'ct')
+                .replace(/\bparkway\b/gi, 'pkwy');
+        }
+
+        // Helper: extract street name from full address
+        // Goal: "4117 95th St Elmhurst NY" -> "95th"
+        function extractStreetFromAddress(address) {
+            if (!address) return '';
+
+            // 1. Take everything before the first comma (if comma exists)
+            let base = address.split(',')[0] || '';
+            base = base.trim().toLowerCase();
+
+            // 2. Remove leading house/building numbers (digits at start)
+            base = base.replace(/^\d+\s+/, '').trim();
+
+            // 3. Remove city/state/zip tokens (elmhurst, queens, ny, nj, 5-digit zip)
+            // Note: using boundary \b to prevent partial word removal
+            base = base.replace(/\b(elmhurst|queens|new york|ny|nj|\d{5})\b/gi, '');
+
+            // 4. Remove ONLY standalone street suffix words
+            // Important: Do NOT remove 'th', 'nd', 'rd', 'st' if they are part of "95th", "2nd"
+            // Only remove "street", "st", "avenue", "ave", etc. if they are standalone words meaning the suffix type
+            const suffixes = [
+                'street', 'st',
+                'avenue', 'ave',
+                'road', 'rd',
+                'drive', 'dr',
+                'lane', 'ln',
+                'boulevard', 'blvd',
+                'circle', 'cir',
+                'court', 'ct',
+                'parkway', 'pkwy'
+            ];
+
+            // Build regex: \b(word1|word2|...)\b
+            const suffixRegex = new RegExp(`\\b(${suffixes.join('|')})\\b`, 'gi');
+            base = base.replace(suffixRegex, '');
+
+            // 5. Cleanup extra spaces
+            base = base.replace(/\s+/g, ' ').trim();
+
+            return base;
+        }
+
+        // Fetch user's street from OpenCage geocoding API
+        async function fetchUserStreetAndShowClients(lat, lon) {
+            // OpenCage API key (configured explicitly)
+            const apiKey = '0596b930e4464e75a7d7948299ed06cd';
+
+            try {
+                const url = `https://api.opencagedata.com/geocode/v1/json?key=${apiKey}&q=${lat}+${lon}&pretty=1`;
+                console.log('Fetching address from OpenCage...');
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    const result = data.results[0];
+                    const roadName = result.components.road || result.formatted;
+                    console.log('User street detected:', roadName);
+
+                    const userStreetNormalized = normalizeStreetName(roadName);
+                    console.log('Normalized user street:', userStreetNormalized);
+                    currentDetectedStreet = userStreetNormalized;
+
+                    // LEDGER UPDATE: Update banner
+                    // LEDGER UPDATE: Update banner
+                    const headerTitle = document.getElementById('cullul-header');
+                    if (headerTitle) {
+                        headerTitle.innerHTML = `LEDGER <span style="font-size:1.2em">${userStreetNormalized.toUpperCase()}</span>`;
+                    }
+
+                    // TRIGGER: Immediately call checkNearbyClients()
+                    console.log('Triggering checkNearbyClients after banner update...');
+                    checkNearbyClients();
+                } else {
+                    console.warn('No address found in OpenCage response');
+                    hideNearbyClientsBanner();
+                }
+            } catch (error) {
+                console.error('OpenCage API error:', error);
+                hideNearbyClientsBanner();
+            }
+        }
+
+        // Find clients on the same street and show them in the banner
+        function showNearbyClientsOnStreet(userStreetNormalized) {
+            if (!userStreetNormalized) {
+                hideNearbyClientsBanner();
+                return;
+            }
+
+            const allClients = [...currentClients, ...oneTimeClients];
+            console.log(`Total clients: ${allClients.length}`);
+
+            // Filter clients whose street matches user's street
+            const nearbyClients = allClients.filter(client => {
+                const clientStreetNormalized = extractStreetFromAddress(client.address || '');
+                const isMatch = clientStreetNormalized === userStreetNormalized;
+
+                if (isMatch) {
+                    console.log(`✓ Match: "${client.name}" at "${client.address}"`);
+                }
+
+                return isMatch;
+            });
+
+            console.log(`Found ${nearbyClients.length} clients on your street`);
+
+            // Start Roulette display
+            displayNearbyClients(nearbyClients);
+            /* displayNearbyClients(nearbyClients); // Old list display replaced */
+        }
+
+        // ===== ROULETTE LOGIC =====
+        let rouletteClients = [];
+        let rouletteIndex = 0;
+
+        // Display clients in the Roulette Layout
+        function displayNearbyClients(clients) {
+            const headerDiv = document.getElementById('ledger-header');
+            const centerDiv = document.getElementById('roulette-center');
+            const headerTitle = document.getElementById('cullul-header');
+            const container = document.getElementById('roulette-container');
+
+            if (!container) {
+                console.error('Roulette container not found');
+                return;
+            }
+
+            // Store clients for rotation
+            rouletteClients = clients;
+            rouletteIndex = 0; // Reset index on new search
+
+            // Update Header (No '@' symbol)
+            if (headerTitle && currentDetectedStreet) {
+                headerTitle.innerHTML = `LEDGER <span style="font-size:1.2em">${currentDetectedStreet.toUpperCase()}</span>`;
+            }
+
+            // Render first frame
+            renderRoulette();
+
+            // Show UI Elements
+            if (headerDiv) headerDiv.style.display = 'block';
+            if (centerDiv) centerDiv.style.display = 'flex';
+
+            console.log('Roulette UI initialized with', clients.length, 'clients');
+            console.log('Roulette UI initialized with', clients.length, 'clients');
+        }
+
+        // Quick Pay Feature
+        function openQuickPay(clientId) {
+            // Get FRESH client data from storage
+            const client = currentClients.find(c => c.id === clientId) ||
+                oneTimeClients.find(c => c.id === clientId);
+
+            if (!client) return;
+
+            const balance = getNetBalance(client);
+            if (balance <= 0) return;
+
+            // Mock selection for processPayment
+            const dummyBox = document.createElement('div');
+            dummyBox.setAttribute('data-client-id', client.id);
+            selectedClientsForPayment = [dummyBox];
+
+            // Pre-fill Modal
+            document.getElementById('payment-amount').value = balance.toFixed(2);
+            document.getElementById('payment-notes').value = 'Quick Pay via Roulette';
+
+            // Show Modal
+            const modal = document.getElementById('payment-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('payment-method').focus(), 100);
+        }
+
+        // Quick Service Log Feature
+        function quickLogService(clientId) {
+            const client = rouletteClients.find(c => c.id === clientId);
+            if (!client) return;
+
+            // Get fresh client reference
+            const freshClient = currentClients.find(c => c.id === clientId) ||
+                oneTimeClients.find(c => c.id === clientId);
+
+            if (!freshClient) return;
+
+            const price = parseFloat(freshClient.frequencyPrice || freshClient.price || 40);
+            const today = new Date();
+            const dayInitial = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][today.getDay()];
+            const dateStr = `${dayInitial} ${today.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}`;
+
+            if (!freshClient.serviceLog) freshClient.serviceLog = [];
+
+            freshClient.serviceLog.push({
+                type: 'mow',
+                date: dateStr,
+                price: price,
+                timestamp: Date.now()
+            });
+
+            // CRITICAL: Save IMMEDIATELY
+            saveToLocalStorage();
+
+            // Force ALL views to refresh
+            updateBillingList();
+            renderRoulette();
+
+            // Visual feedback
+            setTimeout(() => {
+                const container = document.getElementById('roulette-container');
+                const activeLabel = container.querySelector('.active .client-label:first-child');
+                if (activeLabel) {
+                    activeLabel.classList.add('flash-active');
+                }
+            }, 50);
+
+            console.log('✓ Service logged for', freshClient.name, '- New net balance:', getNetBalance(freshClient));
+        }
+
+        // Bulk Service Log Feature (for all Roulette clients)
+        function bulkLogService() {
+            const rouletteCenter = document.getElementById('roulette-center');
+            const rouletteActive = rouletteCenter && rouletteCenter.style.display !== 'none';
+
+            if (rouletteActive && rouletteClients && rouletteClients.length > 0) {
+                const today = new Date();
+                const dayInitial = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][today.getDay()];
+                const dateStr = `${dayInitial} ${today.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}`;
+                const timestamp = Date.now();
+
+                let servicesLogged = 0;
+
+                rouletteClients.forEach(rouletteClient => {
+                    const freshClient = currentClients.find(c => c.id === rouletteClient.id) ||
+                        oneTimeClients.find(c => c.id === rouletteClient.id);
+
+                    if (freshClient) {
+                        const price = parseFloat(freshClient.frequencyPrice || freshClient.price || 40);
+
+                        if (!freshClient.serviceLog) freshClient.serviceLog = [];
+
+                        freshClient.serviceLog.push({
+                            type: 'mow',
+                            date: dateStr,
+                            price: price,
+                            timestamp: timestamp
+                        });
+
+                        servicesLogged++;
+                    }
+                });
+
+                saveToLocalStorage();
+                if (typeof updateBillingList === 'function') updateBillingList();
+                if (typeof renderRoulette === 'function') renderRoulette();
+
+                const squareBtn = document.querySelector('.ps-square-button');
+                if (squareBtn) {
+                    squareBtn.classList.add('pulse-success');
+                    setTimeout(() => squareBtn.classList.remove('pulse-success'), 600);
+                }
+
+                const streetName = typeof currentDetectedStreet !== 'undefined' ? currentDetectedStreet : 'street';
+                console.log(`✅ Logged service for ${servicesLogged} clients on ${streetName}`);
+
+            } else if (document.getElementById('billingSheet') && document.getElementById('billingSheet').classList.contains('active')) {
+                const selected = document.querySelectorAll('.client-checkbox:checked');
+
+                if (selected.length === 0) {
+                    alert('Please select at least one client in the billing sheet');
+                    return;
+                }
+
+                const today = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+                const dayInitial = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][new Date().getDay()];
+                const timestamp = Date.now();
+
+                selected.forEach(box => {
+                    const id = box.getAttribute('data-client-id');
+                    let client = currentClients.find(c => c.id == id) || oneTimeClients.find(c => c.id == id);
+                    if (client) {
+                        if (!client.serviceLog) client.serviceLog = [];
+                        const price = parseFloat(client.frequencyPrice || client.price || 0);
+                        client.serviceLog.push({
+                            type: 'mow',
+                            date: `${dayInitial} ${today}`,
+                            price: price,
+                            timestamp: timestamp
+                        });
+                    }
+                });
+
+                saveToLocalStorage();
+                if (typeof updateBillingList === 'function') updateBillingList();
+
+                console.log(`✅ Logged service for ${selected.length} selected clients`);
+
+            } else {
+                alert('Please open roulette view or billing sheet first');
+            }
+        }
+
+        // Helper to calculate true client balance (Total Services - Total Payments)
+        // MASTER BALANCE CALCULATOR - SINGLE SOURCE OF TRUTH
+        function calculateClientBalance(client) {
+            if (!client) return 0;
+
+            // Gross total of unpaid services in serviceLog
+            return (client.serviceLog || []).reduce((sum, s) => {
+                return sum + (parseFloat(s.price) || 0);
+            }, 0);
+        }
+
+        // Helper to get total payments for a client's currently recorded services
+        function getTotalPayments(client) {
+            if (!client) return 0;
+            return parseFloat(client.partialPaymentsTotal || 0);
+        }
+
+        // Net Balance = Total Services - Total Payments
+        function getNetBalance(client) {
+            if (!client) return 0;
+            return Math.max(0, calculateClientBalance(client) - getTotalPayments(client));
+        }
+
+        // Helper to calculate total services ever provided (for history display)
+        function calculateTotalServicesProvided(client) {
+            if (!client) return 0;
+
+            // Sum of archived history
+            const archivedTotal = (client.ledgerHistory || []).reduce((sum, entry) => {
+                return sum + (parseFloat(entry.totalAmount) || 0);
+            }, 0);
+
+            // Sum of pending services
+            const pendingTotal = (client.serviceLog || []).reduce((sum, s) => {
+                return sum + (parseFloat(s.price) || 0);
+            }, 0);
+
+            return archivedTotal + pendingTotal;
+        }
+
+        // Helper to calculate total payments made
+        function calculateTotalPayments(client) {
+            if (!client) return 0;
+
+            return paymentRecords.reduce((sum, record) => {
+                if (record.clientId === client.id) {
+                    return sum + (parseFloat(record.amount) || 0);
+                }
+                return sum;
+            }, 0);
+        }
+
+        // Format currency helper
+        function formatCurrency(amount) {
+            return '$' + parseFloat(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+
+        function renderRoulette() {
+            const container = document.getElementById('roulette-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            if (rouletteClients.length === 0) {
+                hideNearbyClientsBanner();
+                return;
+            }
+
+            // Get FRESH client data from storage
+            const activeClientId = rouletteClients[rouletteIndex].id;
+            const activeClient = currentClients.find(c => c.id === activeClientId) ||
+                oneTimeClients.find(c => c.id === activeClientId);
+
+            if (!activeClient) return;
+
+            const activeDiv = document.createElement('div');
+            activeDiv.className = 'roulette-client active';
+
+            // Calculate balance from FRESH data (using NET balance)
+            const currentBalance = getNetBalance(activeClient);
+            const balanceText = formatCurrency(currentBalance);
+
+            activeDiv.innerHTML = `
+                <span class="client-label" onclick="event.stopPropagation(); quickLogService('${activeClient.id}')">Service</span>
+                <span class="client-name">${activeClient.name}</span>
+                <span class="client-label" style="${currentBalance > 0 ? 'cursor:pointer' : 'cursor:default; opacity:0.5'}" onclick="event.stopPropagation(); ${currentBalance > 0 ? `openQuickPay('${activeClient.id}')` : ''}">${balanceText}</span>
+            `;
+
+            activeDiv.onclick = cycleRouletteClient;
+            container.appendChild(activeDiv);
+
+            if (rouletteClients.length > 1) {
+                const nextIndex = (rouletteIndex + 1) % rouletteClients.length;
+                const nextClientId = rouletteClients[nextIndex].id;
+                const nextClient = currentClients.find(c => c.id === nextClientId) ||
+                    oneTimeClients.find(c => c.id === nextClientId);
+
+                const fadedDiv = document.createElement('div');
+                fadedDiv.className = 'roulette-client faded';
+                fadedDiv.textContent = nextClient.name;
+                container.appendChild(fadedDiv);
+            }
+        }
+
+        // Cycle to the next client with animation
+        function cycleRouletteClient() {
+            if (rouletteClients.length <= 1) return; // No cycling if only 1
+
+            const container = document.getElementById('roulette-container');
+            const activeEl = container.querySelector('.active');
+
+            // Animate exit (Move DOWN)
+            if (activeEl) {
+                activeEl.classList.remove('active');
+                activeEl.classList.add('exiting');
+            }
+
+            // Increment index loop
+            rouletteIndex = (rouletteIndex + 1) % rouletteClients.length;
+
+            // Wait for exit animation to play out (400ms) before re-rendering
+            setTimeout(() => {
+                renderRoulette();
+            }, 400);
+        }
+
+        // Hide the nearby clients UI
+        function hideNearbyClientsBanner() {
+            const headerDiv = document.getElementById('ledger-header');
+            const centerDiv = document.getElementById('roulette-center');
+
+            if (headerDiv) headerDiv.style.display = 'none';
+            if (centerDiv) centerDiv.style.display = 'none';
+        }
+    </script>
+
+    <!-- Extra Service Modal -->
+    <div id="extra-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Log Extra Service</h3>
+                <button id="modal-close" class="modal-close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-container">
+                    <input type="text" id="extra-input" placeholder="Enter extra service (e.g., trimming $170)">
+                    <button id="extra-dropdown-toggle" class="dropdown-toggle">▼</button>
+                </div>
+                <div id="extra-dropdown" class="dropdown-menu" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" class="modal-btn cancel-btn">Cancel</button>
+                <button id="modal-ok" class="modal-btn ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Collection Modal -->
+    <div id="payment-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Collect Payment</h3>
+                <button id="payment-modal-close" class="modal-close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px;">
+                    <label for="payment-amount" style="font-weight: 600; display: block; margin-bottom: 5px;">Amount
+                        ($)</label>
+                    <input type="number" id="payment-amount" placeholder="0.00" step="0.01" min="0"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="payment-method" style="font-weight: 600; display: block; margin-bottom: 5px;">Payment
+                        Method</label>
+                    <select id="payment-method"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        <option value="">-- Select Method --</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Check">Check</option>
+                        <option value="Credit">Credit Card</option>
+                        <option value="Zelle">Zelle</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="payment-notes" style="font-weight: 600; display: block; margin-bottom: 5px;">Notes
+                        (Optional)</label>
+                    <textarea id="payment-notes" placeholder="Enter notes..."
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; height: 80px; resize: vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="payment-modal-cancel" class="modal-btn cancel-btn">Cancel</button>
+                <button id="payment-modal-save" class="modal-btn ok-btn">Save Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Typewriter Layer -->
+    <!-- Typewriter Layer (The Floor) -->
+    <div id='typewriter-layer'
+        style='position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 900; pointer-events: none; text-align: center; color: white; font-family: "Segoe UI", sans-serif !important;'>
+        <span id='typewriter-text'
+            style='font-size: 80px; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);'></span>
+        <span id='typewriter-cursor' style='font-size: 80px; font-weight: bold; animation: blink 1s infinite;'>|</span>
+    </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js');
+        }
+      </script>
+</body>
+
+</html>
