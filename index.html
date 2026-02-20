@@ -289,13 +289,415 @@
                 transform: translateX(120vw);
             }
         }
+
+        /* RADAR OVERLAY */
+        #radar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .radar-ring {
+            position: absolute;
+            border: 3px solid rgba(179, 229, 252, 0.55);
+            border-radius: 50%;
+            opacity: 0;
+            animation: radar-ripple 2.8s ease-out infinite;
+        }
+
+        .radar-ring:nth-child(2) {
+            animation-delay: 0.9s;
+        }
+
+        .radar-ring:nth-child(3) {
+            animation-delay: 1.8s;
+        }
+
+        @keyframes radar-ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.9;
+                border-color: rgba(179, 229, 252, 0.7);
+            }
+
+            60% {
+                opacity: 0.4;
+                border-color: rgba(100, 181, 246, 0.35);
+            }
+
+            100% {
+                width: 220vmax;
+                height: 220vmax;
+                opacity: 0;
+                border-color: rgba(100, 181, 246, 0);
+            }
+        }
+
+        /* Smooth reveal for ledger header after GPS resolves */
+        @keyframes ledgerFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(-18px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ledger-reveal {
+            animation: ledgerFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* ===== FLOATING CLIENT SEARCH POPUP ===== */
+        #client-search-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 80, 140, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 9000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #client-search-overlay.open {
+            display: flex;
+        }
+
+        #client-search-card {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(255, 255, 255, 0.45);
+            border-radius: 20px;
+            padding: 24px 22px 20px;
+            width: min(88vw, 380px);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.12);
+            animation: popupIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes popupIn {
+            from {
+                opacity: 0;
+                transform: scale(0.88) translateY(-12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        #client-search-card h4 {
+            margin: 0 0 14px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-align: center;
+            opacity: 0.85;
+        }
+
+        #client-search-input {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: 12px;
+            border: 1.5px solid rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.22);
+            color: white;
+            font-size: 17px;
+            font-weight: 500;
+            outline: none;
+            box-sizing: border-box;
+            caret-color: white;
+        }
+
+        #client-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #client-search-input:focus {
+            border-color: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        #client-search-results {
+            margin-top: 10px;
+            max-height: 260px;
+            overflow-y: auto;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .csr-item {
+            padding: 13px 16px;
+            color: white;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .csr-item:last-child {
+            border-bottom: none;
+        }
+
+        .csr-item:hover,
+        .csr-item.highlighted {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .csr-item .csr-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .csr-item .csr-dot.current {
+            background: #2ecc71;
+        }
+
+        .csr-item .csr-dot.onetime {
+            background: #3498db;
+        }
+
+        .csr-empty {
+            padding: 16px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 14px;
+        }
+    </style>
+    <style>
+        /* ===== HISTORY SHEET HEADER ===== */
+        #history-sheet-header {
+            background: white;
+            padding: 15px 20px 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .history-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        #history-client-name {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1a2a40;
+            letter-spacing: 0.5px;
+            margin-top: -5px;
+            padding-bottom: 10px;
+        }
+
+        .history-nav-btn.search-btn {
+            background: #f0f4f8;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+
+        .history-nav-btn.close-btn {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            padding: 0;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .history-nav-btn.close-btn:hover {
+            color: #333;
+        }
+    </style>
+    <style>
+        /* ===== FLOATING CLIENT ENTRY MODAL ===== */
+        #clientSheet {
+            /* Force override sheet styles */
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            bottom: auto !important;
+            right: auto !important;
+            transform: translate(-50%, -50%) !important;
+            width: 90% !important;
+            max-width: 340px !important;
+            height: auto !important;
+            max-height: 85vh !important;
+            border-radius: 24px !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: none;
+            /* hidden by default */
+            flex-direction: column;
+            padding: 0 !important;
+            overflow: visible !important;
+            /* Allow buttons to sit on edge if needed */
+        }
+
+        #clientSheet.active {
+            display: flex !important;
+            animation: modalPopIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes modalPopIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -45%) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        #clientSheet .sheet-content {
+            padding: 24px 20px 80px 20px !important;
+            /* Bottom padding for buttons */
+            overflow-y: auto;
+            border-radius: 24px;
+        }
+
+        /* Hide close button - user wants minimal look? Or keep it? keeping standard close */
+        #clientSheet .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            color: #999;
+            border: none;
+            font-size: 20px;
+            padding: 5px;
+            margin: 0;
+            width: auto;
+            text-align: right;
+        }
+
+        /* Compact Form Styling */
+        .form-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .form-grid input,
+        .form-grid select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            background: #f9f9f9;
+            font-size: 15px;
+        }
+
+        .form-grid input:focus,
+        .form-grid select:focus {
+            background: #fff;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        }
+
+        /* Bottom Floating Action Buttons */
+        .modal-fab-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            /* Let clicks pass through container */
+        }
+
+        .modal-fab {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .modal-fab:active {
+            transform: scale(0.92);
+        }
+
+        .modal-fab.blue-one {
+            background: #3498db;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .modal-fab.green-plus {
+            background: #2ecc71;
+            font-size: 28px;
+        }
     </style>
 </head>
 
 <body>
+    <div id="radar-overlay">
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+    </div>
+    <!-- Floating Client Search Popup -->
+    <div id="client-search-overlay">
+        <div id="client-search-card">
+            <h4>Client Ledger</h4>
+            <input id="client-search-input" type="text" placeholder="Search client..." autocomplete="off"
+                spellcheck="false">
+            <div id="client-search-results"></div>
+        </div>
+    </div>
+
     <div class="sky-background"></div>
 
-    <button id='sky-exit' onclick='toggleHistorySheet()'>✕</button>
+    <button id='sky-exit' onclick='openClientSearchPopup()'>✕</button>
 
     <div class="clouds-layer"></div>
 
@@ -324,55 +726,50 @@
         <div class="circle-icon"></div>
     </button>
 
-    <div id="clientSheet" class="sheet">
+    <div id="clientSheet" class="modal-sheet">
         <div class="sheet-content">
-            <button class="close-btn" onclick="toggleSheet()">✕ Close</button>
+            <button class="close-btn" onclick="toggleSheet()"
+                style="position: absolute; top: 15px; right: 15px; font-size: 24px; color: #ccc;">✕</button>
 
-            <h2>Current Clients</h2>
+            <h2 style="text-align: center; margin-bottom: 20px; font-size: 1.4rem; color: #333;">Client Entry</h2>
+
             <div class="form-grid" id="currentClientForm">
+                <!-- Unified Form Fields -->
                 <div class="autocomplete-wrapper">
-                    <input type="text" id="current-name" placeholder="Client Name" autocomplete="off">
+                    <input type="text" id="current-name" placeholder="Client Name" autocomplete="off"
+                        style="font-weight: 600;">
                     <div class="autocomplete-dropdown" id="current-autocomplete"></div>
                 </div>
+
                 <input type="text" id="current-address" placeholder="Address">
                 <div id="current-address-validation" class="address-validation-message"></div>
+
                 <input type="tel" id="current-phone" placeholder="Phone Number">
 
                 <select id="current-frequency">
-                    <option value="">Frequency...</option>
+                    <option value="">Frequency / Service...</option>
                     <option>Weekly</option>
                     <option>Biweekly</option>
                     <option>Monthly</option>
                     <option>Per Request</option>
+                    <option>One Time Service</option>
                 </select>
-                <input type="text" id="current-frequency-price" placeholder="Price for Frequency ($)">
+
+                <input type="text" id="current-frequency-price" placeholder="Price ($)">
 
                 <div class="extra-service-header">
                     <span>Extra Services:</span>
                     <button type="button" class="add-extra-btn" onclick="addExtraService('current')"
-                        title="Add Another Extra Service">+</button>
+                        title="Add another">+</button>
                 </div>
-                <div id="current-extras-container">
-                    <!-- Extra services will be added here dynamically -->
-                </div>
+                <div id="current-extras-container"></div>
             </div>
-            <button class="save-btn" id="current-save-btn" onclick="saveCurrentClient()">Save Current Client</button>
+        </div>
 
-            <div class="section-divider"></div>
-
-            <h2>New One-Time Client</h2>
-            <div class="form-grid" id="oneTimeClientForm">
-                <div class="autocomplete-wrapper">
-                    <input type="text" id="onetime-name" placeholder="Client Name" autocomplete="off">
-                    <div class="autocomplete-dropdown" id="onetime-autocomplete"></div>
-                </div>
-                <input type="text" id="onetime-address" placeholder="Client Info (Address/Phone)">
-                <div id="onetime-address-validation" class="address-validation-message"></div>
-                <input type="text" id="onetime-service" placeholder="Service Provided">
-                <input type="text" id="onetime-price" placeholder="Price ($)">
-                <textarea id="onetime-comments" placeholder="Comments"></textarea>
-            </div>
-            <button class="save-btn one-time-save" onclick="saveOneTimeClient()">Save One-Time Client</button>
+        <!-- Floating Action Buttons for Save -->
+        <div class="modal-fab-container">
+            <button class="modal-fab blue-one" onclick="saveOneTimeClient()" title="Save as One-Time Client">1</button>
+            <button class="modal-fab green-plus" onclick="saveCurrentClient()" title="Save as Current Client">+</button>
         </div>
     </div>
 
@@ -428,21 +825,25 @@
 
     <!-- History Sheet - Dual Ledger -->
     <div id="historySheet" class="sheet">
-        <div class="sheet-content">
-            <div class="list-actions">
-                <button class="main-menu-btn" onclick="closeAllSheets()">Close History</button>
-            </div>
-            <h2>Client Ledger</h2>
-            <div style="margin-bottom: 20px;">
-                <label for="history-client-filter" style="font-weight: 600; margin-right: 10px;">Select Client:</label>
-                <select id="history-client-filter" onchange="updateHistoryTable()"
-                    style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
-                    <option value="">-- Select a Client --</option>
-                </select>
+        <div class="sheet-content" style="padding-top: 0;">
+            <!-- New 3-zone header -->
+            <!-- New 2-zone header -->
+            <div id="history-sheet-header">
+                <div class="history-header-top">
+                    <button class="history-nav-btn search-btn"
+                        onclick="closeAllSheets(); openClientSearchPopup();">Search</button>
+                    <button class="history-nav-btn close-btn" onclick="closeAllSheets()">✕</button>
+                </div>
+                <div id="history-client-name">—</div>
             </div>
 
+            <!-- Hidden select kept for JS compatibility -->
+            <select id="history-client-filter" onchange="updateHistoryTable()" style="display:none;">
+                <option value="">-- Select a Client --</option>
+            </select>
+
             <!-- Table 1: Service History -->
-            <h3 style="margin-top: 25px; margin-bottom: 15px; color: #2c3e50;">Service History</h3>
+            <h3 style="margin-top: 25px; margin-bottom: 15px; color: #2c3e50; padding: 0 20px;">Service History</h3>
             <div id="servicesContainer" style="margin-bottom: 40px;">
                 <table id="services-table"
                     style="width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -572,6 +973,39 @@
     </div>
 
     <script>
+        // Radar Overlay Logic - Locating User
+        let radarStopped = false;
+        function stopRadar() {
+            if (radarStopped) return;
+            radarStopped = true;
+
+            const radar = document.getElementById('radar-overlay');
+            if (radar) {
+                radar.style.transition = 'opacity 0.9s ease-out';
+                radar.style.opacity = '0';
+                setTimeout(() => {
+                    radar.style.display = 'none';
+                }, 900);
+            }
+
+            // Smoothly reveal the ledger header (if street was detected)
+            const headerDiv = document.getElementById('ledger-header');
+            if (headerDiv) {
+                // Small delay so it appears just as the radar fades out
+                setTimeout(() => {
+                    headerDiv.style.display = 'block';
+                    headerDiv.style.opacity = '0';
+                    // Force reflow before animating
+                    void headerDiv.offsetWidth;
+                    headerDiv.classList.add('ledger-reveal');
+                    headerDiv.style.opacity = '';
+                }, 400);
+            }
+        }
+
+        // Safety fallback — stops radar after 8s even if GPS never resolves
+        setTimeout(() => { if (!radarStopped) stopRadar(); }, 8000);
+
         // Store clients in memory
         let currentClients = [];
         let currentDetectedStreet = "";
@@ -834,8 +1268,28 @@
         }
 
         function saveOneTimeClient() {
-            const name = document.getElementById('onetime-name').value;
-            const address = document.getElementById('onetime-address').value;
+            // UNIFIED FORM LOGIC: Read from CURRENT client fields
+            const name = document.getElementById('current-name').value;
+            const address = document.getElementById('current-address').value;
+            const phone = document.getElementById('current-phone').value;
+            const service = document.getElementById('current-frequency').value || 'One Time Service';
+            const price = document.getElementById('current-frequency-price').value || '0';
+
+            // Collect extra services into comments/notes
+            let comments = document.getElementById('current-phone').value ? `Phone: ${document.getElementById('current-phone').value}` : '';
+
+            const extraInputs = document.querySelectorAll('.extra-service-input');
+            const extraPrices = document.querySelectorAll('.extra-price-input');
+            let extrasText = [];
+            extraInputs.forEach((input, index) => {
+                if (input.value.trim()) {
+                    const p = extraPrices[index]?.value || '0';
+                    extrasText.push(`${input.value}: $${p}`);
+                }
+            });
+            if (extrasText.length > 0) {
+                comments += (comments ? ' | ' : '') + 'Extras: ' + extrasText.join(', ');
+            }
 
             if (!name || !address) {
                 alert('Please fill in at least Name and Address');
@@ -853,9 +1307,9 @@
                 id: oneTimeEditingId || generateId(),
                 name: name,
                 address: address,
-                service: document.getElementById('onetime-service').value,
-                price: document.getElementById('onetime-price').value,
-                comments: document.getElementById('onetime-comments').value,
+                service: service,
+                price: price,
+                comments: comments,
                 serviceLog: existingClient?.serviceLog || [],
                 ledgerHistory: existingClient?.ledgerHistory || [],
                 isPaid: existingClient?.isPaid || false
@@ -872,7 +1326,7 @@
                 oneTimeClients.push(client);
             }
 
-            clearOneTimeClientForm();
+            clearCurrentClientForm(); // Clear the unified form
             saveToLocalStorage(); // Save to LocalStorage
             closeEntrySheetAndShowList();
         }
@@ -1403,6 +1857,16 @@
             const filterSelect = document.getElementById('history-client-filter');
             const selectedClientId = filterSelect.value; // Now stores clientId, not just name
 
+            // Update the visible client name heading
+            const nameHeading = document.getElementById('history-client-name');
+            if (nameHeading) {
+                if (selectedClientId) {
+                    const c = currentClients.find(x => x.id === selectedClientId) || oneTimeClients.find(x => x.id === selectedClientId);
+                    nameHeading.textContent = c ? c.name : '—';
+                } else {
+                    nameHeading.textContent = '—';
+                }
+            }
             // Clear both tables
             const servicesTbody = document.getElementById('services-tbody');
             const paymentsTbody = document.getElementById('payments-tbody');
@@ -2325,6 +2789,127 @@
             }
         }
 
+        // ===== FLOATING CLIENT SEARCH POPUP =====
+        let _csrHighlight = -1;
+
+        function openClientSearchPopup() {
+            // Close any open sheets first
+            closeAllSheets();
+
+            const overlay = document.getElementById('client-search-overlay');
+            const input = document.getElementById('client-search-input');
+            const results = document.getElementById('client-search-results');
+
+            overlay.classList.add('open');
+            input.value = '';
+            results.innerHTML = '';
+            _csrHighlight = -1;
+
+            // Show all clients on open
+            renderSearchResults('');
+            setTimeout(() => input.focus(), 60);
+        }
+
+        function closeClientSearchPopup() {
+            document.getElementById('client-search-overlay').classList.remove('open');
+        }
+
+        function renderSearchResults(query) {
+            const results = document.getElementById('client-search-results');
+            const q = query.trim().toLowerCase();
+
+            const allClients = [
+                ...currentClients.map(c => ({ ...c, _type: 'current' })),
+                ...oneTimeClients.map(c => ({ ...c, _type: 'onetime' }))
+            ];
+
+            const matched = q
+                ? allClients.filter(c => (c.name || '').toLowerCase().includes(q))
+                : allClients.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+            results.innerHTML = '';
+            _csrHighlight = -1;
+
+            if (matched.length === 0) {
+                results.innerHTML = '<div class="csr-empty">No clients found</div>';
+                return;
+            }
+
+            matched.forEach((client, i) => {
+                const item = document.createElement('div');
+                item.className = 'csr-item';
+                item.dataset.clientId = client.id;
+
+                const dot = document.createElement('span');
+                dot.className = 'csr-dot ' + client._type;
+
+                const label = document.createElement('span');
+                label.textContent = client.name;
+
+                item.appendChild(dot);
+                item.appendChild(label);
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // prevent input blur before click registers
+                    selectClientForHistory(client.id);
+                });
+                results.appendChild(item);
+            });
+        }
+
+        function selectClientForHistory(clientId) {
+            closeClientSearchPopup();
+
+            // Populate the history sheet dropdown and open it
+            populateClientFilter();
+
+            const select = document.getElementById('history-client-filter');
+            select.value = clientId;
+
+            const historySheet = document.getElementById('historySheet');
+            historySheet.classList.add('active');
+            updateHistoryTable();
+        }
+
+        // Wire up the search input
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('client-search-input');
+            const overlay = document.getElementById('client-search-overlay');
+
+            input.addEventListener('input', () => {
+                renderSearchResults(input.value);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                const items = document.querySelectorAll('.csr-item');
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    items.forEach(el => el.classList.remove('highlighted'));
+                    _csrHighlight = Math.min(_csrHighlight + 1, items.length - 1);
+                    if (items[_csrHighlight]) items[_csrHighlight].classList.add('highlighted');
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    items.forEach(el => el.classList.remove('highlighted'));
+                    _csrHighlight = Math.max(_csrHighlight - 1, 0);
+                    if (items[_csrHighlight]) items[_csrHighlight].classList.add('highlighted');
+                } else if (e.key === 'Enter') {
+                    if (_csrHighlight >= 0 && items[_csrHighlight]) {
+                        selectClientForHistory(items[_csrHighlight].dataset.clientId);
+                    } else {
+                        // First exact or partial match
+                        const first = document.querySelector('.csr-item');
+                        if (first) selectClientForHistory(first.dataset.clientId);
+                    }
+                } else if (e.key === 'Escape') {
+                    closeClientSearchPopup();
+                }
+            });
+
+            // Close on overlay backdrop click
+            overlay.addEventListener('mousedown', (e) => {
+                if (e.target === overlay) closeClientSearchPopup();
+            });
+        });
+
         function populateClientFilter() {
             const filterSelect = document.getElementById('history-client-filter');
             const currentOptions = filterSelect.querySelectorAll('option:not([value=""])');
@@ -2704,6 +3289,7 @@
 
                     // Always update sky visuals (even if list is empty, to clear old dots)
                     renderSkyVisuals(userLat, userLon, nearbyClients);
+                    stopRadar();
                 },
                 (error) => {
                     let message = 'Geolocation error';
@@ -2713,6 +3299,7 @@
 
                     console.error(`✗ ${message} (${error.code})`);
                     alert(`Location Error: ${message}. Please allow location access and try again.`);
+                    stopRadar();
                 },
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
@@ -2972,11 +3559,12 @@
                     }, 200);
                 } else {
                     // New → Circle (Entry)
+                    const nameToCarryOver = typedText; // capture before clearing
                     closeAllSheets();
                     document.getElementById('clientSheet').classList.add('active');
 
                     setTimeout(() => {
-                        document.getElementById('current-name').value = typedText;
+                        document.getElementById('current-name').value = nameToCarryOver;
                         document.getElementById('current-address').focus();
                     }, 200);
                 }
@@ -3009,11 +3597,13 @@
                     (error) => {
                         console.warn('Geolocation denied or unavailable:', error.message);
                         hideNearbyClientsBanner();
+                        stopRadar();
                     }
                 );
             } else {
                 console.warn('Geolocation not supported');
                 hideNearbyClientsBanner();
+                stopRadar();
             }
         });
 
@@ -3097,22 +3687,24 @@
                     currentDetectedStreet = userStreetNormalized;
 
                     // LEDGER UPDATE: Update banner
-                    // LEDGER UPDATE: Update banner
                     const headerTitle = document.getElementById('cullul-header');
                     if (headerTitle) {
-                        headerTitle.innerHTML = `LEDGER <span style="font-size:1.2em">${userStreetNormalized.toUpperCase()}</span>`;
+                        headerTitle.innerHTML = `Ledger <span style="font-size:1.2em">${userStreetNormalized.toUpperCase()}</span>`;
                     }
 
                     // TRIGGER: Immediately call checkNearbyClients()
                     console.log('Triggering checkNearbyClients after banner update...');
                     checkNearbyClients();
+                    stopRadar();
                 } else {
                     console.warn('No address found in OpenCage response');
                     hideNearbyClientsBanner();
+                    stopRadar();
                 }
             } catch (error) {
                 console.error('OpenCage API error:', error);
                 hideNearbyClientsBanner();
+                stopRadar();
             }
         }
 
@@ -3167,18 +3759,30 @@
 
             // Update Header (No '@' symbol)
             if (headerTitle && currentDetectedStreet) {
-                headerTitle.innerHTML = `LEDGER <span style="font-size:1.2em">${currentDetectedStreet.toUpperCase()}</span>`;
+                headerTitle.innerHTML = `Ledger <span style="font-size:1.2em">${currentDetectedStreet.toUpperCase()}</span>`;
             }
 
-            // Render first frame
-            renderRoulette();
+            // NOTE: ledger-header display is controlled by stopRadar() for smooth animation.
+            // Do NOT set headerDiv.style.display here — let the reveal animation own it.
 
-            // Show UI Elements
-            if (headerDiv) headerDiv.style.display = 'block';
-            if (centerDiv) centerDiv.style.display = 'flex';
-
-            console.log('Roulette UI initialized with', clients.length, 'clients');
-            console.log('Roulette UI initialized with', clients.length, 'clients');
+            if (clients.length > 0) {
+                // Render roulette if there are clients
+                renderRoulette();
+                // Delay roulette appear slightly after header reveal for cascaded feel
+                if (centerDiv) {
+                    centerDiv.style.opacity = '0';
+                    centerDiv.style.display = 'flex';
+                    setTimeout(() => {
+                        centerDiv.style.transition = 'opacity 0.7s ease';
+                        centerDiv.style.opacity = '1';
+                    }, 600);
+                }
+                console.log('Roulette UI initialized with', clients.length, 'clients');
+            } else {
+                // Hide roulette center if no clients, but header stays
+                if (centerDiv) centerDiv.style.display = 'none';
+                console.log('No nearby clients found on', currentDetectedStreet);
+            }
         }
 
         // Quick Pay Feature
@@ -3541,9 +4145,9 @@
     </div>
     <script>
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('/sw.js');
         }
-      </script>
+    </script>
 </body>
 
 </html>
