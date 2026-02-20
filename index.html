@@ -371,6 +371,8 @@
             z-index: 9000;
             justify-content: center;
             align-items: center;
+            touch-action: auto;
+            -webkit-touch-callout: none;
         }
 
         #client-search-overlay.open {
@@ -387,6 +389,8 @@
             width: min(88vw, 380px);
             box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.12);
             animation: popupIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            touch-action: auto;
+            pointer-events: auto;
         }
 
         @keyframes popupIn {
@@ -424,6 +428,12 @@
             outline: none;
             box-sizing: border-box;
             caret-color: white;
+            touch-action: manipulation;
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-appearance: none;
+            appearance: none;
+            pointer-events: auto;
         }
 
         #client-search-input::placeholder {
