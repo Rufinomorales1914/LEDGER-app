@@ -3770,7 +3770,76 @@
             }
         });
 
-        // ===== MOBILE TYPEWRITER INPUT ROUTING =====
+        // ===== MOBILE TYPEWRITER =====
+        (function() {
+          var cur = document.getElementById('typewriter-cursor');
+          var txt = document.getElementById('typewriter-text');
+          if (!cur || !txt) return;
+
+          cur.addEventListener('input', function() {
+            // All typed characters live in this input's value
+            // Mirror them to typedText and show in txt span
+            typedText = this.value;
+            txt.innerText = typedText;
+            txt.style.color = 'white';
+            txt.style.fontSize = '100px';
+          });
+
+          cur.addEventListener('keydown', function(e) {
+            e.stopPropagation();
+
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (typedText.trim() === '') return;
+
+              var searchName = typedText.trim().toLowerCase();
+              var found = [...currentClients, ...oneTimeClients].find(
+                function(c) { return c.name.toLowerCase() === searchName; }
+              );
+
+              if (found) {
+                closeAllSheets();
+                document.getElementById('billingSheet').classList.add('active');
+                updateBillingList();
+                setTimeout(function() {
+                  document.querySelectorAll('.client-checkbox').forEach(function(cb) {
+                    if (cb.getAttribute('data-client-id') === found.id) cb.checked = true;
+                  });
+                }, 200);
+              } else {
+                var carry = typedText;
+                closeAllSheets();
+                document.getElementById('clientSheet').classList.add('active');
+                setTimeout(function() {
+                  document.getElementById('current-name').value = carry;
+                  document.getElementById('current-address').focus();
+                }, 200);
+              }
+
+              typedText = '';
+              txt.innerText = '';
+              this.value = '';
+              this.blur();
+
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              typedText = '';
+              txt.innerText = '';
+              this.value = '';
+              this.blur();
+            }
+          }, true);
+
+          cur.addEventListener('blur', function() {
+            if (typedText.length === 0) {
+              this.value = '';
+              txt.innerText = '';
+            }
+          });
+        })();
+        // ===== END MOBILE TYPEWRITER =====
+
+        // STEP 4: Run location check on page load
         (function() {
           var cursorInput = document.getElementById('typewriter-cursor');
           var textEl = document.getElementById('typewriter-text');
@@ -3872,101 +3941,6 @@
 
         })();
         // ===== END MOBILE TYPEWRITER INPUT ROUTING =====
-        (function() {
-          var mobileInput = document.getElementById('mobile-typewriter-input');
-          var typewriterLayer = document.getElementById('typewriter-layer');
-          var textEl = document.getElementById('typewriter-text');
-          var cursorEl = document.getElementById('typewriter-cursor');
-
-          if (!mobileInput || !typewriterLayer) return;
-
-          // Focus hidden input when typewriter area is tapped
-          typewriterLayer.addEventListener('touchend', function(e) {
-            // Only if no sheet is open
-            if (document.querySelector('.sheet.active') ||
-                document.getElementById('clientSheet').classList.contains('active') ||
-                document.getElementById('clientListSheet').classList.contains('active') ||
-                document.getElementById('client-search-overlay').classList.contains('open')) {
-              return;
-            }
-            e.preventDefault();
-            mobileInput.style.pointerEvents = 'auto';
-            mobileInput.focus();
-            mobileInput.style.pointerEvents = 'none';
-          }, { passive: false });
-
-          // Route mobile keyboard input to typewriter logic
-          mobileInput.addEventListener('input', function() {
-            var val = this.value;
-            if (!val) return;
-
-            var textElement = document.getElementById('typewriter-text');
-            var cursorElement = document.getElementById('typewriter-cursor');
-
-            // Each character typed
-            for (var i = 0; i < val.length; i++) {
-              typedText += val[i];
-            }
-            textElement.innerText = typedText;
-            textElement.style.color = 'white';
-            textElement.style.fontSize = '100px';
-            cursorElement.style.display = 'none';
-
-            // Clear the hidden input so next input event fires fresh
-            this.value = '';
-          });
-
-          // Handle backspace and enter on mobile keyboard
-          mobileInput.addEventListener('keydown', function(e) {
-            var textElement = document.getElementById('typewriter-text');
-            var cursorElement = document.getElementById('typewriter-cursor');
-
-            if (e.key === 'Backspace') {
-              e.preventDefault();
-              typedText = typedText.slice(0, -1);
-              textElement.innerText = typedText;
-              cursorElement.style.display = typedText.length > 0 ? 'none' : 'inline-block';
-            } else if (e.key === 'Enter' && typedText.trim() !== '') {
-              e.preventDefault();
-              var searchName = typedText.trim().toLowerCase();
-              var foundClient = [...currentClients, ...oneTimeClients].find(
-                function(client) { return client.name.toLowerCase() === searchName; }
-              );
-
-              if (foundClient) {
-                closeAllSheets();
-                document.getElementById('billingSheet').classList.add('active');
-                updateBillingList();
-                setTimeout(function() {
-                  document.querySelectorAll('.client-checkbox').forEach(function(cb) {
-                    if (cb.getAttribute('data-client-id') === foundClient.id) {
-                      cb.checked = true;
-                    }
-                  });
-                }, 200);
-              } else {
-                var nameToCarryOver = typedText;
-                closeAllSheets();
-                document.getElementById('clientSheet').classList.add('active');
-                setTimeout(function() {
-                  document.getElementById('current-name').value = nameToCarryOver;
-                  document.getElementById('current-address').focus();
-                }, 200);
-              }
-
-              typedText = '';
-              textElement.innerText = '';
-              cursorElement.style.display = 'inline-block';
-              mobileInput.blur();
-            } else if (e.key === 'Escape') {
-              typedText = '';
-              textElement.innerText = '';
-              cursorElement.style.display = 'inline-block';
-              mobileInput.blur();
-            }
-          });
-        })();
-        // ===== END MOBILE TYPEWRITER SUPPORT =====
 
         // STEP 4: Run location check on page load
 
@@ -4567,8 +4541,7 @@
         style='position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 900; pointer-events: auto; text-align: center; color: white; font-family: "Segoe UI", sans-serif !important; cursor: text; -webkit-tap-highlight-color: transparent;'>
         <span id='typewriter-text'
             style='font-size: 80px; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);'></span>
-        <input id='typewriter-cursor' type='text' inputmode='text' autocomplete='off' autocorrect='off' autocapitalize='none' spellcheck='false' style='font-size:80px;font-weight:bold;animation:blink 1s infinite;background:transparent;border:none;border-bottom:6px solid white;outline:none;color:white;width:60px;text-align:center;padding:0;margin:0;caret-color:transparent;font-family:"Segoe UI",sans-serif;-webkit-user-select:text;user-select:text;touch-action:manipulation;'>
-        <input id='mobile-typewriter-input' type='text' inputmode='text' autocomplete='off' autocorrect='off' autocapitalize='none' spellcheck='false' style='position:absolute;opacity:0;width:1px;height:1px;border:none;padding:0;margin:0;pointer-events:none;z-index:-1;'>
+        <input id='typewriter-cursor' type='text' inputmode='text' autocomplete='off' autocorrect='off' autocapitalize='none' spellcheck='false' style='font-size:16px;font-weight:bold;background:transparent;border:none;border-bottom:6px solid white;outline:none;color:transparent;caret-color:white;width:60px;text-align:center;padding:0;margin:0;font-family:"Segoe UI",sans-serif;-webkit-user-select:text;user-select:text;touch-action:manipulation;-webkit-appearance:none;'>
     </div>
     <script>
         if ('serviceWorker' in navigator) {
