@@ -3771,29 +3771,11 @@
         });
 
 // ===== MOBILE SEARCH BAR =====
-        (function() {
-        var input = document.getElementById('typewriter-cursor');
-        var txt = document.getElementById('typewriter-text');
-        if (!input || !txt) return;
-
-var form = document.getElementById('mobile-search-form');
-if (form) {
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        handleSearch();
-    });
-}
-
-    input.addEventListener('input', function() {
-        typedText = this.value;
-        if (typedText.length > 0) {
-            txt.innerText = typedText;
-            txt.style.color = 'white';
-            txt.style.fontSize = '80px';
-        } else {
-            txt.innerText = '';
-        }
-    });
+(function() {
+    var input = document.getElementById('typewriter-cursor');
+    var txt = document.getElementById('typewriter-text');
+    var goBtn = document.getElementById('search-go-btn');
+    if (!input || !txt) return;
 
     function handleSearch() {
         var search = input.value.trim();
@@ -3814,7 +3796,7 @@ if (form) {
                 });
             }, 200);
         } else {
-            var carry = input.value.trim();
+            var carry = search;
             closeAllSheets();
             document.getElementById('clientSheet').classList.add('active');
             setTimeout(function() {
@@ -3828,23 +3810,31 @@ if (form) {
         input.blur();
     }
 
-    input.addEventListener('keydown', function(e) {
-        e.stopPropagation();
-        if (e.key === 'Enter') {
+    input.addEventListener('input', function() {
+        typedText = this.value;
+        if (typedText.length > 0) {
+            txt.innerText = typedText;
+            txt.style.color = 'white';
+            txt.style.fontSize = '80px';
+        } else {
+            txt.innerText = '';
+        }
+    });
+
+    if (goBtn) {
+        goBtn.addEventListener('click', function(e) {
             e.preventDefault();
             handleSearch();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            typedText = '';
-            txt.innerText = '';
-            input.value = '';
-            input.blur();
-        }
-    }, true);
+        });
+    }
 
-    input.addEventListener('search', function() {
-        handleSearch();
-    });
+    var form = document.getElementById('mobile-search-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleSearch();
+        });
+    }
 
     input.addEventListener('blur', function() {
         if (this.value.length === 0) {
@@ -4460,19 +4450,24 @@ if (form) {
 
     <!-- Mobile Search Bar (iMessage style) -->
     <div id='mobile-search-bar'
-        style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 280px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:transparent;pointer-events:none;'>
-        <form id="mobile-search-form" action="#" style="flex:1;margin:0;padding:0;" onsubmit="return false;">
-  <input id='typewriter-cursor'
-    type='text'
-    inputmode='text'
-    autocomplete='off'
-    autocorrect='off'
-    autocapitalize='none'
-    spellcheck='false'
-    placeholder='|'
-    style='width:100%;font-size:18px;font-weight:600;padding:12px 18px;border-radius:24px;border:2px solid rgba(255,255,255,0.8);background:rgba(255,255,255,0.15);color:white;outline:none;-webkit-appearance:none;appearance:none;caret-color:white;font-family:"Segoe UI",sans-serif;pointer-events:auto;'>
-</form>
-    </div>
+    style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 140px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.8);border-radius:30px;padding:6px 6px 6px 18px;pointer-events:auto;'>
+    <form id="mobile-search-form" action="#" style="flex:1;margin:0;padding:0;" onsubmit="return false;">
+        <input id='typewriter-cursor'
+            type='text'
+            enterkeyhint='go'
+            inputmode='text'
+            autocomplete='off'
+            autocorrect='off'
+            autocapitalize='none'
+            spellcheck='false'
+            placeholder='|'
+            style='width:100%;font-size:18px;font-weight:600;border:none;background:transparent;color:white;outline:none;-webkit-appearance:none;appearance:none;caret-color:white;font-family:"Segoe UI",sans-serif;pointer-events:auto;'>
+    </form>
+    <button id='search-go-btn'
+        style='width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid white;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(255,255,255,0.4);pointer-events:auto;flex-shrink:0;'>
+        <span style='color:white;font-size:18px;font-weight:bold;margin-left:2px;'>▶</span>
+    </button>
+</div>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js');
