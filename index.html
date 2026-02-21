@@ -3774,36 +3774,49 @@
         (function() {
           var cursorInput = document.getElementById('typewriter-cursor');
           var textEl = document.getElementById('typewriter-text');
+          var isProcessing = false;
 
           if (!cursorInput) return;
 
-          // Show blinking pipe when empty, hide when typing
-          cursorInput.addEventListener('input', function() {
+          cursorInput.addEventListener('input', function(e) {
+            // Prevent re-entry loop when we reset value
+            if (isProcessing) return;
+            isProcessing = true;
+
             var val = this.value;
-            if (!val) return;
 
-            for (var i = 0; i < val.length; i++) {
-              typedText += val[i];
+            // Add each new character to typedText
+            if (val.length > 0) {
+              typedText += val;
+              textEl.innerText = typedText;
+              textEl.style.color = 'white';
+              textEl.style.fontSize = '100px';
+              this.style.borderBottom = 'none';
             }
-            textEl.innerText = typedText;
-            textEl.style.color = 'white';
-            textEl.style.fontSize = '100px';
 
-            // Keep input visually empty (text shows in textEl)
+            // Reset input value WITHOUT triggering another input event
             this.value = '';
-            this.style.borderBottom = 'none';
+
+            isProcessing = false;
           });
 
           cursorInput.addEventListener('keydown', function(e) {
+            var textElement = document.getElementById('typewriter-text');
+
             if (e.key === 'Backspace') {
               e.preventDefault();
+              e.stopPropagation();
               typedText = typedText.slice(0, -1);
-              textEl.innerText = typedText;
+              textElement.innerText = typedText;
               if (typedText.length === 0) {
                 this.style.borderBottom = '6px solid white';
               }
-            } else if (e.key === 'Enter' && typedText.trim() !== '') {
+
+            } else if (e.key === 'Enter') {
               e.preventDefault();
+              e.stopPropagation();
+              if (typedText.trim() === '') return;
+
               var searchName = typedText.trim().toLowerCase();
               var foundClient = [...currentClients, ...oneTimeClients].find(
                 function(c) { return c.name.toLowerCase() === searchName; }
@@ -3831,25 +3844,35 @@
               }
 
               typedText = '';
-              textEl.innerText = '';
+              textElement.innerText = '';
               this.value = '';
               this.style.borderBottom = '6px solid white';
               this.blur();
+
             } else if (e.key === 'Escape') {
+              e.preventDefault();
+              e.stopPropagation();
               typedText = '';
-              textEl.innerText = '';
+              textElement.innerText = '';
               this.value = '';
               this.style.borderBottom = '6px solid white';
               this.blur();
             }
           });
 
-          // Keep cursor input always focusable and visible
+          // Restore cursor line when input loses focus and nothing typed
           cursorInput.addEventListener('blur', function() {
             if (typedText.length === 0) {
               this.style.borderBottom = '6px solid white';
+              this.value = '';
             }
           });
+
+          // Prevent the window keydown from blocking this input
+          cursorInput.addEventListener('keydown', function(e) {
+            e.stopPropagation();
+          }, true);
+
         })();
         // ===== END MOBILE TYPEWRITER INPUT ROUTING =====
         (function() {
