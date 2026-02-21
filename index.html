@@ -3774,47 +3774,46 @@
         (function() {
           var cursorInput = document.getElementById('typewriter-cursor');
           var textEl = document.getElementById('typewriter-text');
-          var isProcessing = false;
 
           if (!cursorInput) return;
 
-          cursorInput.addEventListener('input', function(e) {
-            // Prevent re-entry loop when we reset value
-            if (isProcessing) return;
-            isProcessing = true;
+          // Track previous input length to detect new characters
+          var prevLength = 0;
 
-            var val = this.value;
+          cursorInput.addEventListener('input', function() {
+            var currentVal = this.value;
+            var currentLength = currentVal.length;
 
-            // Add each new character to typedText
-            if (val.length > 0) {
-              typedText += val;
-              textEl.innerText = typedText;
-              textEl.style.color = 'white';
-              textEl.style.fontSize = '100px';
-              this.style.borderBottom = 'none';
+            if (currentLength > prevLength) {
+              // Characters were added — grab only the new ones
+              var newChars = currentVal.slice(prevLength);
+              typedText += newChars;
+            } else if (currentLength < prevLength) {
+              // Characters were deleted via mobile backspace
+              var charsRemoved = prevLength - currentLength;
+              typedText = typedText.slice(0, -charsRemoved);
             }
 
-            // Reset input value WITHOUT triggering another input event
-            this.value = '';
+            prevLength = currentLength;
 
-            isProcessing = false;
+            // Update the display
+            textEl.innerText = typedText;
+
+            if (typedText.length > 0) {
+              textEl.style.color = 'white';
+              textEl.style.fontSize = '100px';
+              cursorInput.style.borderBottom = 'none';
+            } else {
+              cursorInput.style.borderBottom = '6px solid white';
+            }
           });
 
+          // Handle Enter and Escape on mobile keyboard
           cursorInput.addEventListener('keydown', function(e) {
-            var textElement = document.getElementById('typewriter-text');
+            e.stopPropagation();
 
-            if (e.key === 'Backspace') {
+            if (e.key === 'Enter') {
               e.preventDefault();
-              e.stopPropagation();
-              typedText = typedText.slice(0, -1);
-              textElement.innerText = typedText;
-              if (typedText.length === 0) {
-                this.style.borderBottom = '6px solid white';
-              }
-
-            } else if (e.key === 'Enter') {
-              e.preventDefault();
-              e.stopPropagation();
               if (typedText.trim() === '') return;
 
               var searchName = typedText.trim().toLowerCase();
@@ -3843,35 +3842,33 @@
                 }, 200);
               }
 
+              // Reset everything
               typedText = '';
-              textElement.innerText = '';
-              this.value = '';
-              this.style.borderBottom = '6px solid white';
-              this.blur();
+              textEl.innerText = '';
+              cursorInput.value = '';
+              prevLength = 0;
+              cursorInput.style.borderBottom = '6px solid white';
+              cursorInput.blur();
 
             } else if (e.key === 'Escape') {
               e.preventDefault();
-              e.stopPropagation();
               typedText = '';
-              textElement.innerText = '';
-              this.value = '';
-              this.style.borderBottom = '6px solid white';
-              this.blur();
+              textEl.innerText = '';
+              cursorInput.value = '';
+              prevLength = 0;
+              cursorInput.style.borderBottom = '6px solid white';
+              cursorInput.blur();
             }
-          });
+          }, true);
 
-          // Restore cursor line when input loses focus and nothing typed
+          // Restore cursor appearance when not focused and empty
           cursorInput.addEventListener('blur', function() {
             if (typedText.length === 0) {
-              this.style.borderBottom = '6px solid white';
-              this.value = '';
+              cursorInput.value = '';
+              prevLength = 0;
+              cursorInput.style.borderBottom = '6px solid white';
             }
           });
-
-          // Prevent the window keydown from blocking this input
-          cursorInput.addEventListener('keydown', function(e) {
-            e.stopPropagation();
-          }, true);
 
         })();
         // ===== END MOBILE TYPEWRITER INPUT ROUTING =====
