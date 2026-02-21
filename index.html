@@ -3776,40 +3776,48 @@
   var txt = document.getElementById('typewriter-text');
   if (!input || !txt) return;
 
-  // Show typed text in the sky as user types
+  // Mirror typed text to the sky display span
   input.addEventListener('input', function() {
     typedText = this.value;
     if (typedText.length > 0) {
       txt.innerText = typedText;
+      txt.style.color = 'white';
       txt.style.fontSize = '80px';
     } else {
       txt.innerText = '';
     }
   });
 
-  // Handle Enter (Go button on iPhone keyboard)
+  // Handle Go/Enter button on iPhone keyboard
+  // and Escape to clear
   input.addEventListener('keydown', function(e) {
+    // Stop desktop window listener from also firing
     e.stopPropagation();
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (typedText.trim() === '') return;
+      var search = typedText.trim();
+      if (search === '') return;
 
-      var searchName = typedText.trim().toLowerCase();
+      var searchName = search.toLowerCase();
       var found = [...currentClients, ...oneTimeClients].find(
         function(c) { return c.name.toLowerCase() === searchName; }
       );
 
       if (found) {
+        // Existing client → open billing sheet and check them
         closeAllSheets();
         document.getElementById('billingSheet').classList.add('active');
         updateBillingList();
         setTimeout(function() {
           document.querySelectorAll('.client-checkbox').forEach(function(cb) {
-            if (cb.getAttribute('data-client-id') === found.id) cb.checked = true;
+            if (cb.getAttribute('data-client-id') === found.id) {
+              cb.checked = true;
+            }
           });
         }, 200);
       } else {
+        // New name → open client entry form with name filled in
         var carry = typedText;
         closeAllSheets();
         document.getElementById('clientSheet').classList.add('active');
@@ -3819,27 +3827,68 @@
         }, 200);
       }
 
+      // Reset after action
       typedText = '';
       txt.innerText = '';
-      this.value = '';
-      this.blur();
+      input.value = '';
+      input.blur();
 
     } else if (e.key === 'Escape') {
       e.preventDefault();
       typedText = '';
       txt.innerText = '';
-      this.value = '';
-      this.blur();
+      input.value = '';
+      input.blur();
     }
   }, true);
 
-  // When input loses focus and nothing typed, clear display
+  // Clear sky text when input loses focus with no value
   input.addEventListener('blur', function() {
     if (this.value.length === 0) {
       typedText = '';
       txt.innerText = '';
     }
   });
+
+  // Handle the "Search" / "Go" button on iPhone keyboard
+  // which fires a 'search' event on type=search inputs
+  input.addEventListener('search', function() {
+    var search = this.value.trim();
+    if (search === '') return;
+
+    typedText = search;
+    var searchName = search.toLowerCase();
+    var found = [...currentClients, ...oneTimeClients].find(
+      function(c) { return c.name.toLowerCase() === searchName; }
+    );
+
+    if (found) {
+      closeAllSheets();
+      document.getElementById('billingSheet').classList.add('active');
+      updateBillingList();
+      setTimeout(function() {
+        document.querySelectorAll('.client-checkbox').forEach(function(cb) {
+          if (cb.getAttribute('data-client-id') === found.id) {
+            cb.checked = true;
+          }
+        });
+      }, 200);
+    } else {
+      var carry = typedText;
+      closeAllSheets();
+      document.getElementById('clientSheet').classList.add('active');
+      setTimeout(function() {
+        document.getElementById('current-name').value = carry;
+        document.getElementById('current-address').focus();
+      }, 200);
+    }
+
+    typedText = '';
+    txt.innerText = '';
+    this.value = '';
+    this.blur();
+  });
+
 })();
 // ===== END MOBILE SEARCH BAR =====
 
@@ -4447,7 +4496,7 @@
 
     <!-- Mobile Search Bar (iMessage style) -->
     <div id='mobile-search-bar'
-        style='position:fixed;bottom:0;left:0;width:100%;z-index:901;display:flex;align-items:center;padding:10px 16px 24px 16px;box-sizing:border-box;background:transparent;gap:10px;'>
+        style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 160px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:transparent;'>
         <input id='typewriter-cursor'
             type='search'
             inputmode='text'
