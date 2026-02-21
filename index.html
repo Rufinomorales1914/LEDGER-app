@@ -5,7 +5,9 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#000000">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Client Management</title>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -3768,6 +3770,103 @@
             }
         });
 
+        // ===== MOBILE TYPEWRITER SUPPORT =====
+        (function() {
+          var mobileInput = document.getElementById('mobile-typewriter-input');
+          var typewriterLayer = document.getElementById('typewriter-layer');
+          var textEl = document.getElementById('typewriter-text');
+          var cursorEl = document.getElementById('typewriter-cursor');
+
+          if (!mobileInput || !typewriterLayer) return;
+
+          // Focus hidden input when typewriter area is tapped
+          typewriterLayer.addEventListener('touchend', function(e) {
+            // Only if no sheet is open
+            if (document.querySelector('.sheet.active') ||
+                document.getElementById('clientSheet').classList.contains('active') ||
+                document.getElementById('clientListSheet').classList.contains('active') ||
+                document.getElementById('client-search-overlay').classList.contains('open')) {
+              return;
+            }
+            e.preventDefault();
+            mobileInput.style.pointerEvents = 'auto';
+            mobileInput.focus();
+            mobileInput.style.pointerEvents = 'none';
+          }, { passive: false });
+
+          // Route mobile keyboard input to typewriter logic
+          mobileInput.addEventListener('input', function() {
+            var val = this.value;
+            if (!val) return;
+
+            var textElement = document.getElementById('typewriter-text');
+            var cursorElement = document.getElementById('typewriter-cursor');
+
+            // Each character typed
+            for (var i = 0; i < val.length; i++) {
+              typedText += val[i];
+            }
+            textElement.innerText = typedText;
+            textElement.style.color = 'white';
+            textElement.style.fontSize = '100px';
+            cursorElement.style.display = 'none';
+
+            // Clear the hidden input so next input event fires fresh
+            this.value = '';
+          });
+
+          // Handle backspace and enter on mobile keyboard
+          mobileInput.addEventListener('keydown', function(e) {
+            var textElement = document.getElementById('typewriter-text');
+            var cursorElement = document.getElementById('typewriter-cursor');
+
+            if (e.key === 'Backspace') {
+              e.preventDefault();
+              typedText = typedText.slice(0, -1);
+              textElement.innerText = typedText;
+              cursorElement.style.display = typedText.length > 0 ? 'none' : 'inline-block';
+            } else if (e.key === 'Enter' && typedText.trim() !== '') {
+              e.preventDefault();
+              var searchName = typedText.trim().toLowerCase();
+              var foundClient = [...currentClients, ...oneTimeClients].find(
+                function(client) { return client.name.toLowerCase() === searchName; }
+              );
+
+              if (foundClient) {
+                closeAllSheets();
+                document.getElementById('billingSheet').classList.add('active');
+                updateBillingList();
+                setTimeout(function() {
+                  document.querySelectorAll('.client-checkbox').forEach(function(cb) {
+                    if (cb.getAttribute('data-client-id') === foundClient.id) {
+                      cb.checked = true;
+                    }
+                  });
+                }, 200);
+              } else {
+                var nameToCarryOver = typedText;
+                closeAllSheets();
+                document.getElementById('clientSheet').classList.add('active');
+                setTimeout(function() {
+                  document.getElementById('current-name').value = nameToCarryOver;
+                  document.getElementById('current-address').focus();
+                }, 200);
+              }
+
+              typedText = '';
+              textElement.innerText = '';
+              cursorElement.style.display = 'inline-block';
+              mobileInput.blur();
+            } else if (e.key === 'Escape') {
+              typedText = '';
+              textElement.innerText = '';
+              cursorElement.style.display = 'inline-block';
+              mobileInput.blur();
+            }
+          });
+        })();
+        // ===== END MOBILE TYPEWRITER SUPPORT =====
+
         // STEP 4: Run location check on page load
 
 
@@ -4364,10 +4463,11 @@
     <!-- Typewriter Layer -->
     <!-- Typewriter Layer (The Floor) -->
     <div id='typewriter-layer'
-        style='position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 900; pointer-events: none; text-align: center; color: white; font-family: "Segoe UI", sans-serif !important;'>
+        style='position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 900; pointer-events: auto; text-align: center; color: white; font-family: "Segoe UI", sans-serif !important; cursor: text; -webkit-tap-highlight-color: transparent;'>
         <span id='typewriter-text'
             style='font-size: 80px; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);'></span>
         <span id='typewriter-cursor' style='font-size: 80px; font-weight: bold; animation: blink 1s infinite;'>|</span>
+        <input id='mobile-typewriter-input' type='text' inputmode='text' autocomplete='off' autocorrect='off' autocapitalize='none' spellcheck='false' style='position:absolute;opacity:0;width:1px;height:1px;border:none;padding:0;margin:0;pointer-events:none;z-index:-1;'>
     </div>
     <script>
         if ('serviceWorker' in navigator) {
