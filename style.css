@@ -1299,3 +1299,18 @@ textarea {
 #nearby-clients-list li:last-child {
     border-bottom: none;
 }
+
+/* === MOBILE SEARCH BAR === */
+#typewriter-cursor::placeholder {
+  color: rgba(255,255,255,0.8);
+  font-size: 28px;
+  font-weight: bold;
+}
+#typewriter-cursor:focus {
+  background: rgba(255,255,255,0.25);
+  border-color: white;
+  outline: none;
+}
+#mobile-search-bar {
+  pointer-events: auto;
+}
