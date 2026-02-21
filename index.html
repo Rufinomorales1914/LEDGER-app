@@ -931,25 +931,36 @@
         <div class="sheet-content">
             <!-- Top buttons: Back arrow (left) and Close (right) -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <button class="modal-fab" onclick="document.getElementById('clientListSheet').classList.remove('active'); toggleSheet();" title="Back to New Client Entry" style="background: #3498db; font-size: 24px; color: white;">←</button>
-                <button class="close-btn" onclick="closeAllSheets()" style="font-size: 24px; color: #ccc; background: transparent; border: none; cursor: pointer; padding: 0; width: auto; margin: 0;">✕</button>
+                <button class="modal-fab"
+                    onclick="document.getElementById('clientListSheet').classList.remove('active'); toggleSheet();"
+                    title="Back to New Client Entry"
+                    style="background: #3498db; font-size: 24px; color: white;">←</button>
+                <button class="close-btn" onclick="closeAllSheets()"
+                    style="font-size: 24px; color: #ccc; background: transparent; border: none; cursor: pointer; padding: 0; width: auto; margin: 0;">✕</button>
             </div>
 
             <!-- Search box -->
-            <input type="text" id="client-list-search" placeholder="Search clients..." autocomplete="off" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #e0e0e0; background: #f9f9f9; font-size: 15px; margin-bottom: 20px;">
+            <input type="text" id="client-list-search" placeholder="Search clients..." autocomplete="off"
+                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #e0e0e0; background: #f9f9f9; font-size: 15px; margin-bottom: 20px;">
 
             <!-- Client details display area -->
             <div id="clientListContainer"></div>
 
             <!-- Delete button at bottom -->
             <div style="text-align: center; margin: 30px 0 20px 0;">
-                <button id="client-detail-delete-btn" class="delete-btn" style="display: none; background: #e74c3c; color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-weight: 700; font-size: 14px;">✕ Delete Client</button>
+                <button id="client-detail-delete-btn" class="delete-btn"
+                    style="display: none; background: #e74c3c; color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-weight: 700; font-size: 14px;">✕
+                    Delete Client</button>
             </div>
 
             <!-- Backup/Restore buttons at bottom -->
             <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 20px;">
-                <button class="backup-btn" onclick="backupData()" style="flex: 1; padding: 10px 12px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">Backup Data</button>
-                <button class="restore-btn" onclick="restoreData()" style="flex: 1; padding: 10px 12px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">Restore Data</button>
+                <button class="backup-btn" onclick="backupData()"
+                    style="flex: 1; padding: 10px 12px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">Backup
+                    Data</button>
+                <button class="restore-btn" onclick="restoreData()"
+                    style="flex: 1; padding: 10px 12px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">Restore
+                    Data</button>
                 <input type="file" id="restore-file" accept=".json" style="display: none;">
             </div>
         </div>
@@ -2236,7 +2247,7 @@
 
             // Determine which client to display
             let clientToDisplay = null;
-            
+
             if (query && filteredClients.length > 0) {
                 // If searching, show first match
                 clientToDisplay = filteredClients[0];
@@ -2348,7 +2359,7 @@
 
             // Close the client list sheet
             document.getElementById('clientListSheet').classList.remove('active');
-            
+
             // Open the entry sheet after a short delay for smooth transition
             setTimeout(() => {
                 document.getElementById('clientSheet').classList.add('active');
@@ -3770,81 +3781,74 @@
             }
         });
 
-// ===== MOBILE SEARCH BAR =====
-(function() {
-    var input = document.getElementById('typewriter-cursor');
-    var txt = document.getElementById('typewriter-text');
-    var goBtn = document.getElementById('search-go-btn');
-    if (!input || !txt) return;
-
-    function handleSearch() {
-        var search = input.value.trim();
-        if (search === '') return;
-        var searchName = search.toLowerCase();
-        var found = [...currentClients, ...oneTimeClients].find(
-            function(c) { return c.name.toLowerCase() === searchName; }
-        );
-        if (found) {
-            closeAllSheets();
-            document.getElementById('billingSheet').classList.add('active');
-            updateBillingList();
-            setTimeout(function() {
-                document.querySelectorAll('.client-checkbox').forEach(function(cb) {
-                    if (cb.getAttribute('data-client-id') === found.id) {
-                        cb.checked = true;
-                    }
-                });
-            }, 200);
-        } else {
-            var carry = search;
-            closeAllSheets();
-            document.getElementById('clientSheet').classList.add('active');
-            setTimeout(function() {
-                document.getElementById('current-name').value = carry;
-                document.getElementById('current-address').focus();
-            }, 200);
-        }
-        typedText = '';
-        txt.innerText = '';
-        input.value = '';
-        input.blur();
-    }
-
-    input.addEventListener('input', function() {
-        typedText = this.value;
-        if (typedText.length > 0) {
-            txt.innerText = typedText;
-            txt.style.color = 'white';
-            txt.style.fontSize = '80px';
-        } else {
-            txt.innerText = '';
-        }
-    });
-
-    if (goBtn) {
-        goBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            handleSearch();
-        });
-    }
-
-    var form = document.getElementById('mobile-search-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            handleSearch();
-        });
-    }
-
-    input.addEventListener('blur', function() {
-        if (this.value.length === 0) {
+        // ===== MOBILE SEARCH BAR =====
+        function handleMobileSearch() {
+            var input = document.getElementById('typewriter-cursor');
+            var txt = document.getElementById('typewriter-text');
+            var search = input.value.trim();
+            if (search === '') return;
+            var searchName = search.toLowerCase();
+            var found = [...currentClients, ...oneTimeClients].find(
+                function (c) { return c.name.toLowerCase() === searchName; }
+            );
+            if (found) {
+                closeAllSheets();
+                document.getElementById('billingSheet').classList.add('active');
+                updateBillingList();
+                setTimeout(function () {
+                    document.querySelectorAll('.client-checkbox').forEach(function (cb) {
+                        if (cb.getAttribute('data-client-id') === found.id) {
+                            cb.checked = true;
+                        }
+                    });
+                }, 200);
+            } else {
+                var carry = search;
+                closeAllSheets();
+                document.getElementById('clientSheet').classList.add('active');
+                setTimeout(function () {
+                    document.getElementById('current-name').value = carry;
+                    document.getElementById('current-address').focus();
+                }, 200);
+            }
             typedText = '';
             txt.innerText = '';
+            input.value = '';
+            input.blur();
         }
-    });
 
-})();
-// ===== END MOBILE SEARCH BAR =====
+        (function () {
+            var input = document.getElementById('typewriter-cursor');
+            var txt = document.getElementById('typewriter-text');
+            if (!input || !txt) return;
+
+            input.addEventListener('input', function () {
+                typedText = this.value;
+                if (typedText.length > 0) {
+                    txt.innerText = typedText;
+                    txt.style.color = 'white';
+                    txt.style.fontSize = '80px';
+                } else {
+                    txt.innerText = '';
+                }
+            });
+
+            input.addEventListener('blur', function () {
+                if (this.value.length === 0) {
+                    typedText = '';
+                    txt.innerText = '';
+                }
+            });
+
+            var form = document.getElementById('mobile-search-form');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    handleMobileSearch();
+                });
+            }
+        })();
+        // ===== END MOBILE SEARCH BAR =====
 
         // STEP 4: Run location check on page load
 
@@ -4450,24 +4454,17 @@
 
     <!-- Mobile Search Bar (iMessage style) -->
     <div id='mobile-search-bar'
-    style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 140px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.8);border-radius:30px;padding:6px 6px 6px 18px;pointer-events:auto;'>
-    <form id="mobile-search-form" action="#" style="flex:1;margin:0;padding:0;" onsubmit="return false;">
-        <input id='typewriter-cursor'
-            type='text'
-            enterkeyhint='go'
-            inputmode='text'
-            autocomplete='off'
-            autocorrect='off'
-            autocapitalize='none'
-            spellcheck='false'
-            placeholder='|'
-            style='width:100%;font-size:18px;font-weight:600;border:none;background:transparent;color:white;outline:none;-webkit-appearance:none;appearance:none;caret-color:white;font-family:"Segoe UI",sans-serif;pointer-events:auto;'>
-    </form>
-    <button id='search-go-btn'
-        style='width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid white;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(255,255,255,0.4);pointer-events:auto;flex-shrink:0;'>
-        <span style='color:white;font-size:18px;font-weight:bold;margin-left:2px;'>▶</span>
-    </button>
-</div>
+        style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 160px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.8);border-radius:30px;padding:6px 6px 6px 18px;pointer-events:auto;'>
+        <form id="mobile-search-form" action="#" style="flex:1;margin:0;padding:0;" onsubmit="return false;">
+            <input id='typewriter-cursor' type='text' enterkeyhint='go' inputmode='text' autocomplete='off'
+                autocorrect='off' autocapitalize='none' spellcheck='false' placeholder='|'
+                style='width:100%;font-size:18px;font-weight:600;border:none;background:transparent;color:white;outline:none;-webkit-appearance:none;appearance:none;caret-color:white;font-family:"Segoe UI",sans-serif;pointer-events:auto;'>
+        </form>
+        <button id='search-go-btn' onclick='handleMobileSearch()'
+            style='width:44px;height:44px;border-radius:50%;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;pointer-events:auto;flex-shrink:0;padding:0;-webkit-appearance:none;appearance:none;'>
+            <span style='color:white;font-size:32px;line-height:1;'>▶</span>
+        </button>
+    </div>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js');
