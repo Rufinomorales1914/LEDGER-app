@@ -4454,16 +4454,16 @@
 
     <!-- Mobile Search Bar (iMessage style) -->
     <div id='mobile-search-bar'
-        style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 160px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.8);border-radius:30px;padding:6px 6px 6px 18px;pointer-events:auto;'>
+        style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 210px);z-index:901;display:flex;align-items:center;box-sizing:border-box;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.8);border-radius:30px;padding:6px 6px 6px 18px;pointer-events:auto;'>
         <form id="mobile-search-form" action="#" style="flex:1;margin:0;padding:0;" onsubmit="return false;">
             <input id='typewriter-cursor' type='text' enterkeyhint='go' inputmode='text' autocomplete='off'
                 autocorrect='off' autocapitalize='none' spellcheck='false' placeholder='|'
                 style='width:100%;font-size:18px;font-weight:600;border:none;background:transparent;color:white;outline:none;-webkit-appearance:none;appearance:none;caret-color:white;font-family:"Segoe UI",sans-serif;pointer-events:auto;'>
         </form>
-        <button id='search-go-btn' onclick='handleMobileSearch()'
-            style='width:44px;height:44px;border-radius:50%;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;pointer-events:auto;flex-shrink:0;padding:0;-webkit-appearance:none;appearance:none;'>
-            <span style='color:white;font-size:32px;line-height:1;'>▶</span>
-        </button>
+        <div onclick='handleMobileSearch()'
+            style='width:44px;height:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;flex-shrink:0;cursor:pointer;'>
+            <span style='color:white;font-size:36px;line-height:1;'>▶</span>
+        </div>
     </div>
     <script>
         if ('serviceWorker' in navigator) {
