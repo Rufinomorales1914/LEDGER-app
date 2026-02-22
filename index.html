@@ -4295,29 +4295,32 @@
                 return;
             }
 
-            // Get FRESH client data from storage
             const activeClientId = rouletteClients[rouletteIndex].id;
             const activeClient = currentClients.find(c => c.id === activeClientId) ||
                 oneTimeClients.find(c => c.id === activeClientId);
 
             if (!activeClient) return;
 
-            const activeDiv = document.createElement('div');
-            activeDiv.className = 'roulette-client active';
-
-            // Calculate balance from FRESH data (using NET balance)
             const currentBalance = getNetBalance(activeClient);
             const balanceText = formatCurrency(currentBalance);
 
-            activeDiv.innerHTML = `
-                <span class="client-label" onclick="event.stopPropagation(); quickLogService('${activeClient.id}')">Service</span>
-                <span class="client-name">${activeClient.name}</span>
-                <span class="client-label" style="${currentBalance > 0 ? 'cursor:pointer' : 'cursor:default; opacity:0.5'}" onclick="event.stopPropagation(); ${currentBalance > 0 ? `openQuickPay('${activeClient.id}')` : ''}">${balanceText}</span>
-            `;
+            // FROSTED BUBBLE with M and amount
+            const bubble = document.createElement('div');
+            bubble.style.cssText = 'position:absolute;top:-80px;left:50%;transform:translateX(-50%);display:flex;gap:16px;align-items:center;justify-content:center;pointer-events:auto;white-space:nowrap;';
+            bubble.innerHTML = `
+    <span style="background:rgba(255,255,255,0.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.5);border-radius:30px;padding:12px 28px;font-family:Segoe UI,sans-serif;font-weight:700;font-size:1.8rem;color:white;text-shadow:0px 2px 8px rgba(0,0,0,0.2);cursor:pointer;letter-spacing:2px;" onclick="quickLogService('${activeClient.id}')">M</span>
+    <span style="background:rgba(255,255,255,0.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.5);border-radius:30px;padding:12px 28px;font-family:Segoe UI,sans-serif;font-weight:700;font-size:1.8rem;color:white;text-shadow:0px 2px 8px rgba(0,0,0,0.2);${currentBalance > 0 ? 'cursor:pointer' : 'cursor:default;opacity:0.5'};" onclick="${currentBalance > 0 ? `openQuickPay('${activeClient.id}')` : ''}">${balanceText}</span>
+`;
+            container.appendChild(bubble);
 
+            // ACTIVE CLIENT NAME
+            const activeDiv = document.createElement('div');
+            activeDiv.className = 'roulette-client active';
+            activeDiv.innerHTML = `<span class="client-name">${activeClient.name}</span>`;
             activeDiv.onclick = cycleRouletteClient;
             container.appendChild(activeDiv);
 
+            // FADED NEXT CLIENT
             if (rouletteClients.length > 1) {
                 const nextIndex = (rouletteIndex + 1) % rouletteClients.length;
                 const nextClientId = rouletteClients[nextIndex].id;
