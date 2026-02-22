@@ -89,6 +89,7 @@
             align-items: center;
             perspective: 500px;
             pointer-events: none;
+            overflow: visible;
             /* Container is transparent to clicks */
         }
 
@@ -193,6 +194,7 @@
 
         /* Active styling: Big, Bright, Center, Soft Shadow */
         .roulette-client.active {
+            overflow: visible;
             font-size: 5rem;
             color: white;
             opacity: 1;
@@ -4318,7 +4320,7 @@
 
             const activeDiv = document.createElement('div');
             activeDiv.className = 'roulette-client active';
-            activeDiv.innerHTML = `<span class="client-name" style="display:inline-block;width:100vw;text-align:center;font-size:clamp(1rem,10vw,5rem);white-space:nowrap;transform-origin:center;scale:1;">${activeClient.name}</span>`;
+            activeDiv.innerHTML = `<span class="client-name" style="display:block;width:100vw;max-width:100vw;text-align:center;font-size:clamp(0.8rem,9vw,5rem);white-space:nowrap;overflow:visible;">${activeClient.name}</span>`;
             activeDiv.onclick = cycleRouletteClient;
             container.appendChild(activeDiv);
 
