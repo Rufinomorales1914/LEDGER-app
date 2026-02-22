@@ -1,17 +1,28 @@
-const cacheName = 'ledger-v1';
+const cacheName = 'ledger-v2';
 const assets = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/manifest.json',
-  '/icon-192.png.jpg',
-  '/icon-512.png.jpg'
+  '/LEDGER-app/',
+  '/LEDGER-app/index.html',
+  '/LEDGER-app/style.css',
+  '/LEDGER-app/manifest.json',
+  '/LEDGER-app/icon-192.png',
+  '/LEDGER-app/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(cacheName).then(cache => {
-      cache.addAll(assets);
+      return cache.addAll(assets);
+    })
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(key => key !== cacheName).map(key => caches.delete(key))
+      );
     })
   );
 });
