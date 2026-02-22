@@ -4523,6 +4523,101 @@
             navigator.serviceWorker.register('/sw.js');
         }
     </script>
+    <script>
+        (function () {
+            let touchStartY = 0;
+            let touchCurrentY = 0;
+            let isPulling = false;
+            let arrowEl = null;
+            const PULL_THRESHOLD = 80;
+
+            // Create subtle arrow indicator
+            function createArrow() {
+                const arrow = document.createElement('div');
+                arrow.id = 'pull-arrow';
+                arrow.innerHTML = '↓';
+                arrow.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    color: rgba(255,255,255,0.8);
+                    font-size: 28px;
+                    z-index: 9998;
+                    display: none;
+                    pointer-events: none;
+                    transition: opacity 0.2s ease;
+                `;
+                document.body.appendChild(arrow);
+                return arrow;
+            }
+
+            document.addEventListener('touchstart', function (e) {
+                if (window.scrollY === 0 && !document.querySelector('.sheet.active')) {
+                    touchStartY = e.touches[0].clientY;
+                    isPulling = true;
+                    if (!arrowEl) arrowEl = createArrow();
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', function (e) {
+                if (!isPulling) return;
+                touchCurrentY = e.touches[0].clientY;
+                const pullDistance = touchCurrentY - touchStartY;
+                if (pullDistance > 20) {
+                    arrowEl.style.display = 'block';
+                    arrowEl.style.opacity = Math.min(pullDistance / PULL_THRESHOLD, 1);
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function () {
+                if (!isPulling) return;
+                const pullDistance = touchCurrentY - touchStartY;
+                if (arrowEl) {
+                    arrowEl.style.display = 'none';
+                    arrowEl.style.opacity = '0';
+                }
+                if (pullDistance > PULL_THRESHOLD) {
+                    triggerRefresh();
+                }
+                isPulling = false;
+                touchStartY = 0;
+                touchCurrentY = 0;
+            });
+
+            function triggerRefresh() {
+                currentDetectedStreet = "";
+                rouletteClients = [];
+                rouletteIndex = 0;
+                document.getElementById('roulette-center').style.display = 'none';
+                document.getElementById('ledger-header').style.display = 'none';
+                radarStopped = false;
+                const radar = document.getElementById('radar-overlay');
+                if (radar) {
+                    radar.style.display = 'flex';
+                    radar.style.opacity = '1';
+                    const rings = radar.querySelectorAll('.radar-ring');
+                    rings.forEach(ring => {
+                        ring.style.animation = 'none';
+                        ring.offsetHeight;
+                        ring.style.animation = '';
+                    });
+                }
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            fetchUserStreetAndShowClients(
+                                position.coords.latitude,
+                                position.coords.longitude
+                            );
+                        },
+                        (error) => { stopRadar(); },
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    );
+                }
+            }
+        })();
+    </script>
 </body>
 
 </html>
