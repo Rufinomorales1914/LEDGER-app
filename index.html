@@ -4304,14 +4304,19 @@
             const currentBalance = getNetBalance(activeClient);
             const balanceText = formatCurrency(currentBalance);
 
-            // FROSTED BUBBLE with M and amount
+            // FROSTED BUBBLE with M and amount — two separate bubbles
             const bubble = document.createElement('div');
             bubble.style.cssText = 'position:absolute;top:-80px;left:50%;transform:translateX(-50%);display:flex;gap:16px;align-items:center;justify-content:center;pointer-events:auto;white-space:nowrap;';
             bubble.innerHTML = `
-    <span style="background:rgba(255,255,255,0.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.5);border-radius:30px;padding:12px 28px;font-family:Segoe UI,sans-serif;font-weight:700;font-size:1.8rem;color:white;text-shadow:0px 2px 8px rgba(0,0,0,0.2);cursor:pointer;letter-spacing:2px;" onclick="quickLogService('${activeClient.id}')">M</span>
-    <span style="background:rgba(255,255,255,0.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.5);border-radius:30px;padding:12px 28px;font-family:Segoe UI,sans-serif;font-weight:700;font-size:1.8rem;color:white;text-shadow:0px 2px 8px rgba(0,0,0,0.2);${currentBalance > 0 ? 'cursor:pointer' : 'cursor:default;opacity:0.5'};" onclick="${currentBalance > 0 ? `openQuickPay('${activeClient.id}')` : ''}">${balanceText}</span>
-`;
+        <span style="background:rgba(255,255,255,0.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.5);border-radius:30px;padding:12px 28px;font-family:Segoe UI,sans-serif;font-weight:700;font-size:1.8rem;color:white;text-shadow:0px 2px 8px rgba(0,0,0,0.2);cursor:pointer;letter-spacing:2px;" onclick="quickLogService('${activeClient.id}')">M</span>
+        <span style="background:rgba(255,255,255,0.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,0.5);border-radius:30px;padding:12px 28px;font-family:Segoe UI,sans-serif;font-weight:700;font-size:1.8rem;color:white;text-shadow:0px 2px 8px rgba(0,0,0,0.2);${currentBalance > 0 ? 'cursor:pointer' : 'cursor:default;opacity:0.5'};" onclick="${currentBalance > 0 ? `openQuickPay('${activeClient.id}')` : ''}">${balanceText}</span>
+    `;
             container.appendChild(bubble);
+
+            // SELECTOR FRAME — two horizontal lines around the active name
+            const selectorFrame = document.createElement('div');
+            selectorFrame.style.cssText = 'position:absolute;top:50%;left:5%;width:90%;transform:translateY(-50%);height:80px;border-top:1.5px solid rgba(255,255,255,0.6);border-bottom:1.5px solid rgba(255,255,255,0.6);pointer-events:none;z-index:1;';
+            container.appendChild(selectorFrame);
 
             // ACTIVE CLIENT NAME
             const activeDiv = document.createElement('div');
@@ -4332,6 +4337,48 @@
                 fadedDiv.innerHTML = `<span style="display:inline-block;width:100%;text-align:center;font-size:clamp(1rem,8vw,3rem);white-space:nowrap;">${nextClient.name}</span>`;
                 container.appendChild(fadedDiv);
             }
+
+            // SWIPE GESTURE
+            let touchStartY = 0;
+            let touchCurrentY = 0;
+            let isSwiping = false;
+
+            container.addEventListener('touchstart', function (e) {
+                touchStartY = e.touches[0].clientY;
+                touchCurrentY = touchStartY;
+                isSwiping = true;
+            }, { passive: true });
+
+            container.addEventListener('touchmove', function (e) {
+                if (!isSwiping) return;
+                touchCurrentY = e.touches[0].clientY;
+                const diff = touchCurrentY - touchStartY;
+                const activeEl = container.querySelector('.roulette-client.active .client-name');
+                if (activeEl) {
+                    activeEl.style.transform = `translateY(${diff * 0.4}px)`;
+                    activeEl.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchend', function (e) {
+                if (!isSwiping) return;
+                isSwiping = false;
+                const diff = touchCurrentY - touchStartY;
+                const activeEl = container.querySelector('.roulette-client.active .client-name');
+                if (activeEl) {
+                    activeEl.style.transform = '';
+                    activeEl.style.transition = 'transform 0.3s ease';
+                }
+                if (Math.abs(diff) > 40) {
+                    if (diff < 0) {
+                        rouletteIndex = (rouletteIndex + 1) % rouletteClients.length;
+                    } else {
+                        rouletteIndex = (rouletteIndex - 1 + rouletteClients.length) % rouletteClients.length;
+                    }
+                    renderRoulette();
+                }
+            }, { passive: true });
+            // END SWIPE GESTURE
         }
 
         // Cycle to the next client with animation
