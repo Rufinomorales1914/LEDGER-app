@@ -1,20 +1,20 @@
 {
-    "short_name": "LEDGER",
-    "name": "LEDGER",
-    "icons": [
-      {
-        "src": "icon-192.png.jpg",
-        "type": "image/jpeg",
-        "sizes": "192x192"
-      },
-      {
-        "src": "icon-512.png.jpg",
-        "type": "image/jpeg",
-        "sizes": "512x512"
-      }
-    ],
-    "start_url": "/",
-    "background_color": "#ffffff",
-    "display": "standalone",
-    "theme_color": "#000000"
-  }
+  "name": "Ledger App",
+  "short_name": "Ledger",
+  "start_url": "/LEDGER-app/",
+  "display": "standalone",
+  "background_color": "#4facfe",
+  "theme_color": "#4facfe",
+  "icons": [
+    {
+      "src": "/LEDGER-app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/LEDGER-app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
