@@ -4304,7 +4304,6 @@
             const currentBalance = getNetBalance(activeClient);
             const balanceText = formatCurrency(currentBalance);
 
-            // FROSTED BUBBLE with M and amount
             const bubble = document.createElement('div');
             bubble.style.cssText = 'position:absolute;top:-80px;left:50%;transform:translateX(-50%);display:flex;gap:16px;align-items:center;justify-content:center;pointer-events:auto;white-space:nowrap;';
             bubble.innerHTML = `
@@ -4313,19 +4312,16 @@
     `;
             container.appendChild(bubble);
 
-            // SELECTOR FRAME
             const selectorFrame = document.createElement('div');
             selectorFrame.style.cssText = 'position:absolute;top:50%;left:5%;width:90%;transform:translateY(-50%);height:80px;border-top:1.5px solid rgba(255,255,255,0.6);border-bottom:1.5px solid rgba(255,255,255,0.6);pointer-events:none;z-index:1;';
             container.appendChild(selectorFrame);
 
-            // ACTIVE CLIENT NAME
             const activeDiv = document.createElement('div');
             activeDiv.className = 'roulette-client active';
             activeDiv.innerHTML = `<span class="client-name" style="display:inline-block;width:100%;text-align:center;font-size:clamp(1.5rem,12vw,5rem);white-space:nowrap;">${activeClient.name}</span>`;
             activeDiv.onclick = cycleRouletteClient;
             container.appendChild(activeDiv);
 
-            // FADED NEXT CLIENT
             if (rouletteClients.length > 1) {
                 const nextIndex = (rouletteIndex + 1) % rouletteClients.length;
                 const nextClientId = rouletteClients[nextIndex].id;
@@ -4338,6 +4334,52 @@
                 container.appendChild(fadedDiv);
             }
         }
+
+        // SWIPE GESTURE - set up once only
+        (function () {
+            const stableParent = document.getElementById('roulette-center');
+            let touchStartY = 0;
+            let touchCurrentY = 0;
+            let isSwiping = false;
+
+            document.addEventListener('touchstart', function (e) {
+                const container = document.getElementById('roulette-container');
+                if (!container || !container.contains(e.target)) return;
+                touchStartY = e.touches[0].clientY;
+                touchCurrentY = touchStartY;
+                isSwiping = true;
+            }, { passive: true });
+
+            document.addEventListener('touchmove', function (e) {
+                if (!isSwiping) return;
+                touchCurrentY = e.touches[0].clientY;
+                const diff = touchCurrentY - touchStartY;
+                const activeEl = document.querySelector('#roulette-container .roulette-client.active .client-name');
+                if (activeEl) {
+                    activeEl.style.transform = `translateY(${diff * 0.4}px)`;
+                    activeEl.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function (e) {
+                if (!isSwiping) return;
+                isSwiping = false;
+                const diff = touchCurrentY - touchStartY;
+                const activeEl = document.querySelector('#roulette-container .roulette-client.active .client-name');
+                if (activeEl) {
+                    activeEl.style.transform = '';
+                    activeEl.style.transition = 'transform 0.3s ease';
+                }
+                if (Math.abs(diff) > 40) {
+                    if (diff < 0) {
+                        rouletteIndex = (rouletteIndex + 1) % rouletteClients.length;
+                    } else {
+                        rouletteIndex = (rouletteIndex - 1 + rouletteClients.length) % rouletteClients.length;
+                    }
+                    renderRoulette();
+                }
+            }, { passive: true });
+        })();
 
         // Cycle to the next client with animation
         function cycleRouletteClient() {
