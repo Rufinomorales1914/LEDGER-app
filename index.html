@@ -4316,7 +4316,7 @@
             // ACTIVE CLIENT NAME
             const activeDiv = document.createElement('div');
             activeDiv.className = 'roulette-client active';
-            activeDiv.innerHTML = `<span class="client-name">${activeClient.name}</span>`;
+            activeDiv.innerHTML = `<span class="client-name" style="display:inline-block;width:100%;text-align:center;font-size:clamp(1.5rem,12vw,5rem);white-space:nowrap;">${activeClient.name}</span>`;
             activeDiv.onclick = cycleRouletteClient;
             container.appendChild(activeDiv);
 
@@ -4329,7 +4329,7 @@
 
                 const fadedDiv = document.createElement('div');
                 fadedDiv.className = 'roulette-client faded';
-                fadedDiv.textContent = nextClient.name;
+                fadedDiv.innerHTML = `<span style="display:inline-block;width:100%;text-align:center;font-size:clamp(1rem,8vw,3rem);white-space:nowrap;">${nextClient.name}</span>`;
                 container.appendChild(fadedDiv);
             }
         }
