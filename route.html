@@ -749,57 +749,11 @@ function calcDist(lat1, lon1, lat2, lon2) {
 //  WHICH CLIENTS ARE DUE THIS WEEK
 // ════════════════════════════════════════════
 function getClientsDueThisWeek() {
-  const now = new Date();
-  // Get Monday of current week
-  const monday = new Date(now);
-  monday.setHours(0,0,0,0);
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-
-  const due = [];
-
-  allClients.forEach(client => {
-    const override = clientOverrides[client.id];
-    if (override === 'cancel') return; // explicitly cancelled this week
-
-    const freq = (client.frequency || client.service || '').toLowerCase();
-
-    // No frequency set or one-time/per-request → always include
-    if (!freq || freq.includes('one time') || freq.includes('per request')) {
-      due.push(client);
-      return;
-    }
-
-    // Get last mow date
-    const mows = (client.serviceLog || []).filter(s => s.type === 'mow');
-    if (!mows.length) {
-      due.push(client); // never served → always include
-      return;
-    }
-
-    const lastEntry = mows[mows.length - 1];
-    const lastDate  = parseDateFromEntry(lastEntry.date);
-
-    // If we can't parse the date, include them to be safe
-    if (!lastDate) { due.push(client); return; }
-
-    const daysSince = Math.floor((now - lastDate) / 86400000);
-
-    // Include if they haven't been served recently enough for their frequency
-    // Use generous thresholds — better to include than miss someone
-    if (freq.includes('weekly')   && daysSince >= 5)  { due.push(client); return; }
-    if (freq.includes('biweekly') && daysSince >= 12) { due.push(client); return; }
-    if (freq.includes('monthly')  && daysSince >= 25) { due.push(client); return; }
-
-    // If last service was THIS week already, still include them
-    // (route planner shows all clients — user can skip/cancel individually)
-    if (lastDate < monday) {
-      due.push(client);
-    }
-  });
-
-  // Deduplicate by id
+  // Simple rule: include ALL clients unless explicitly cancelled this week.
+  // The driver decides who to skip — the app should never hide a client automatically.
   const seen = new Set();
-  return due.filter(c => {
+  return allClients.filter(c => {
+    if (clientOverrides[c.id] === 'cancel') return false;
     if (seen.has(c.id)) return false;
     seen.add(c.id);
     return true;
@@ -898,23 +852,36 @@ async function generateRoute() {
 
   // reload clients fresh
   loadData();
+  setStatus(`Loaded ${allClients.length} total clients...`);
+
   const dueClients = getClientsDueThisWeek();
+  setStatus(`${allClients.length} clients total, ${dueClients.length} due this week...`);
 
   if (dueClients.length === 0) {
-    setStatus('No clients due this week.');
+    setStatus('⚠️ No clients found. Make sure clients are saved in the main app and open both from the same GitHub Pages URL.');
     return;
   }
 
-  setStatus(`Found ${dueClients.length} clients due this week...`);
-  showLoading('Geocoding addresses', '');
+  showLoading('Geocoding home address...', '');
 
   // Geocode home base
-  const homeCords = await geocodeAddress(addr);
-  if (!homeCords) {
+  let homeCords = null;
+  try {
+    homeCords = await geocodeAddress(addr);
+  } catch(e) {
     hideLoading();
-    setStatus('❌ Could not find home address. Check the address and try again.');
+    setStatus(`❌ Home geocoding error: ${e.message}`);
     return;
   }
+
+  if (!homeCords) {
+    hideLoading();
+    // Still proceed — use a default center point so route still builds
+    setStatus('⚠️ Could not geocode home address. Building route without distance optimization...');
+    homeCords = { lat: 40.7128, lon: -74.0060 }; // NYC fallback
+  }
+
+  updateLoadingText('Geocoding clients...');
 
   // Geocode all due clients
   const geocoded = [];
@@ -922,31 +889,38 @@ async function generateRoute() {
     const c = dueClients[i];
     updateLoadingProgress(`${i+1} / ${dueClients.length} — ${c.name}`);
 
-    let coords = geocodeCache.get(c.address) || null;
-    if (!coords && c.gpsLat && c.gpsLon) {
+    let coords = null;
+
+    // Use cached coords first
+    if (geocodeCache.has(c.address)) {
+      coords = geocodeCache.get(c.address);
+    } else if (c.gpsLat && c.gpsLon) {
       coords = { lat: parseFloat(c.gpsLat), lon: parseFloat(c.gpsLon) };
       geocodeCache.set(c.address, coords);
+    } else {
+      try {
+        coords = await geocodeAddress(c.address);
+      } catch(e) {
+        coords = null;
+      }
     }
-    if (!coords) coords = await geocodeAddress(c.address);
 
+    // Always include client — use home coords as fallback if geocoding fails
+    const finalCoords = coords || { lat: homeCords.lat + (Math.random()-0.5)*0.01, lon: homeCords.lon + (Math.random()-0.5)*0.01 };
     if (coords) {
-      // Save back to client for main app to use
       c.gpsLat = coords.lat;
       c.gpsLon = coords.lon;
-      geocoded.push({ ...c, _lat: coords.lat, _lon: coords.lon });
-    } else {
-      // Still include but mark as no-coords (will appear at end)
-      geocoded.push({ ...c, _lat: homeCords.lat, _lon: homeCords.lon, _noCoords: true });
     }
+    geocoded.push({ ...c, _lat: finalCoords.lat, _lon: finalCoords.lon, _noCoords: !coords });
   }
 
   // Persist geocoded coords back to main app localStorage
   persistCoordsToMainApp();
 
-  updateLoadingText('Optimizing route...');
-  updateLoadingProgress('');
+  updateLoadingText('Building route...');
+  updateLoadingProgress(`${geocoded.length} clients`);
 
-  // Build full optimized route (nearest-neighbor from home)
+  // Build full optimized route
   const optimized = nearestNeighborRoute(homeCords.lat, homeCords.lon, geocoded);
 
   // Split into days
@@ -959,10 +933,11 @@ async function generateRoute() {
   saveSettings();
 
   hideLoading();
-  showRouteScreen();
-  // Activate nav buttons now that route exists
+
+  // Activate nav buttons
   document.getElementById('btn-live').style.opacity = '1';
   document.getElementById('btn-week').style.opacity = '1';
+  showRouteScreen();
   showLiveView();
   startGPS();
 }
