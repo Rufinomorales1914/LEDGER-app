@@ -489,6 +489,14 @@ body {
         </button>
       </div>
 
+      <!-- navigate current (shown when only 1 stop or no next) -->
+      <div id="navigate-current-wrap" style="display:none; margin-top:12px;">
+        <button id="navigate-current-btn" onclick="navigateToCurrent()"
+          style="width:100%;padding:16px;background:linear-gradient(135deg,#16a34a,#15803d);border:none;border-radius:13px;color:white;font-size:17px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(22,163,74,0.4);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;">
+          🗺️ Navigate Here
+        </button>
+      </div>
+
       <div class="divider" style="margin: 16px 0;"></div>
       <div class="section-title">Rest of today</div>
       <div id="today-remaining"></div>
@@ -516,8 +524,8 @@ body {
 <!-- Bottom Nav -->
 <div id="bottom-nav">
   <button class="nav-fab fab-home" onclick="showSetup()" title="Setup">🏠</button>
-  <button class="nav-fab fab-live" onclick="showLiveView()" title="Live Route">📍</button>
-  <button class="nav-fab fab-week" onclick="showWeekView()" title="Week Overview">📅</button>
+  <button class="nav-fab fab-live" id="btn-live" onclick="showLiveView()" title="Live Route" style="opacity:0.4;">📍</button>
+  <button class="nav-fab fab-week" id="btn-week" onclick="showWeekView()" title="Week Overview" style="opacity:0.4;">📅</button>
 </div>
 
 <script>
@@ -552,6 +560,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setupDayToggles();
 
   if (homeBase && weekRoute.length > 0) {
+    document.getElementById('btn-live').style.opacity = '1';
+    document.getElementById('btn-week').style.opacity = '1';
     showRouteScreen();
     showLiveView();
     startGPS();
@@ -663,7 +673,11 @@ function showRouteScreen() {
 }
 
 function showLiveView() {
-  if (!weekRoute.length) { showSetup(); return; }
+  if (!weekRoute.length) {
+    setStatus('⚠️ Generate a route first.');
+    showSetup();
+    return;
+  }
   activeView = 'live';
   showRouteScreen();
   document.getElementById('live-view').style.display = 'block';
@@ -673,7 +687,11 @@ function showLiveView() {
 }
 
 function showWeekView() {
-  if (!weekRoute.length) { showSetup(); return; }
+  if (!weekRoute.length) {
+    setStatus('⚠️ Generate a route first.');
+    showSetup();
+    return;
+  }
   activeView = 'week';
   showRouteScreen();
   document.getElementById('live-view').style.display = 'none';
@@ -732,39 +750,60 @@ function calcDist(lat1, lon1, lat2, lon2) {
 // ════════════════════════════════════════════
 function getClientsDueThisWeek() {
   const now = new Date();
+  // Get Monday of current week
+  const monday = new Date(now);
+  monday.setHours(0,0,0,0);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+
   const due = [];
 
   allClients.forEach(client => {
     const override = clientOverrides[client.id];
-    if (override === 'cancel') return; // cancelled this week
+    if (override === 'cancel') return; // explicitly cancelled this week
 
     const freq = (client.frequency || client.service || '').toLowerCase();
 
-    // One-time or Per Request: always include until they have a recent service log
-    if (freq.includes('one time') || freq.includes('per request') || !freq) {
+    // No frequency set or one-time/per-request → always include
+    if (!freq || freq.includes('one time') || freq.includes('per request')) {
       due.push(client);
       return;
     }
 
-    // Get last service date from serviceLog
+    // Get last mow date
     const mows = (client.serviceLog || []).filter(s => s.type === 'mow');
     if (!mows.length) {
-      due.push(client); // never been served → include
+      due.push(client); // never served → always include
       return;
     }
 
     const lastEntry = mows[mows.length - 1];
     const lastDate  = parseDateFromEntry(lastEntry.date);
+
+    // If we can't parse the date, include them to be safe
     if (!lastDate) { due.push(client); return; }
 
     const daysSince = Math.floor((now - lastDate) / 86400000);
 
-    if (freq.includes('weekly')   && daysSince >= 6)  due.push(client);
-    if (freq.includes('biweekly') && daysSince >= 13) due.push(client);
-    if (freq.includes('monthly')  && daysSince >= 28) due.push(client);
+    // Include if they haven't been served recently enough for their frequency
+    // Use generous thresholds — better to include than miss someone
+    if (freq.includes('weekly')   && daysSince >= 5)  { due.push(client); return; }
+    if (freq.includes('biweekly') && daysSince >= 12) { due.push(client); return; }
+    if (freq.includes('monthly')  && daysSince >= 25) { due.push(client); return; }
+
+    // If last service was THIS week already, still include them
+    // (route planner shows all clients — user can skip/cancel individually)
+    if (lastDate < monday) {
+      due.push(client);
+    }
   });
 
-  return due;
+  // Deduplicate by id
+  const seen = new Set();
+  return due.filter(c => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
 }
 
 function parseDateFromEntry(dateStr) {
@@ -921,6 +960,9 @@ async function generateRoute() {
 
   hideLoading();
   showRouteScreen();
+  // Activate nav buttons now that route exists
+  document.getElementById('btn-live').style.opacity = '1';
+  document.getElementById('btn-week').style.opacity = '1';
   showLiveView();
   startGPS();
 }
@@ -1048,13 +1090,18 @@ function renderLiveView() {
 
   // Next
   const nextCard = document.getElementById('next-stop-card');
+  const navCurrentWrap = document.getElementById('navigate-current-wrap');
+
   if (ci < clients.length - 1) {
     const next = clients[ci + 1];
     document.getElementById('next-name').textContent = (next.name || '—').toUpperCase();
     document.getElementById('next-addr').textContent = next.address || '—';
     nextCard.style.display = 'block';
+    navCurrentWrap.style.display = 'none';
   } else {
+    // No next stop — show navigate to current instead
     nextCard.style.display = 'none';
+    navCurrentWrap.style.display = 'block';
   }
 
   // Today's remaining
@@ -1301,6 +1348,24 @@ function setupTouchDrag() {
 // ════════════════════════════════════════════
 //  NAVIGATION
 // ════════════════════════════════════════════
+function openMapsTo(address) {
+  const addr = encodeURIComponent(address);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const url = isIOS
+    ? `maps://maps.apple.com/?daddr=${addr}&dirflg=d`
+    : `https://www.google.com/maps/dir/?api=1&destination=${addr}&travelmode=driving`;
+  window.open(url, '_blank');
+}
+
+// Navigate to current stop (single stop or last stop of day)
+function navigateToCurrent() {
+  const today = getTodayDayRoute();
+  if (!today) return;
+  const cur = today.clients[currentStopIndex];
+  if (!cur?.address) return;
+  openMapsTo(cur.address);
+}
+
 function navigateToNext() {
   const today = getTodayDayRoute();
   if (!today) return;
@@ -1309,14 +1374,7 @@ function navigateToNext() {
   const next = today.clients[nextIdx];
   if (!next?.address) return;
 
-  const addr = encodeURIComponent(next.address);
-  // iOS Apple Maps, Android Google Maps
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const url = isIOS
-    ? `maps://maps.apple.com/?daddr=${addr}&dirflg=d`
-    : `https://www.google.com/maps/dir/?api=1&destination=${addr}&travelmode=driving`;
-
-  window.open(url, '_blank');
+  openMapsTo(next.address);
 
   // Advance stop index
   currentStopIndex = nextIdx;
