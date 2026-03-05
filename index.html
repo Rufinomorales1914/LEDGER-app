@@ -4617,6 +4617,69 @@
                 }
             }
         })();
+        // ===== SWIPE UP → OPEN ROUTE PLANNER =====
+(function () {
+  let touchStartY = 0;
+  let touchCurrentY = 0;
+  let isPullingUp = false;
+  let arrowEl = null;
+  const PULL_THRESHOLD = 80;
+
+  function createUpArrow() {
+    const arrow = document.createElement('div');
+    arrow.id = 'pull-up-arrow';
+    arrow.innerHTML = '🗺';
+    arrow.style.cssText = `
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 36px;
+      z-index: 9998;
+      display: none;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    `;
+    document.body.appendChild(arrow);
+    return arrow;
+  }
+
+  document.addEventListener('touchstart', function (e) {
+    if (document.querySelector('.sheet.active')) return;
+    if (document.getElementById('client-search-overlay').classList.contains('open')) return;
+    touchStartY = e.touches[0].clientY;
+    touchCurrentY = touchStartY;
+    isPullingUp = true;
+    if (!arrowEl) arrowEl = createUpArrow();
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
+    if (!isPullingUp) return;
+    touchCurrentY = e.touches[0].clientY;
+    const pullDistance = touchStartY - touchCurrentY;
+    if (pullDistance > 20) {
+      arrowEl.style.display = 'block';
+      arrowEl.style.opacity = Math.min(pullDistance / PULL_THRESHOLD, 1);
+    } else {
+      if (arrowEl) arrowEl.style.display = 'none';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function () {
+    if (!isPullingUp) return;
+    isPullingUp = false;
+    const pullDistance = touchStartY - touchCurrentY;
+    if (arrowEl) {
+      arrowEl.style.display = 'none';
+      arrowEl.style.opacity = '0';
+    }
+    if (pullDistance > PULL_THRESHOLD) {
+      window.location.href = 'route.html';
+    }
+    touchStartY = 0;
+    touchCurrentY = 0;
+  });
+})();
     </script>
 </body>
 
