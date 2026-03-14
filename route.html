@@ -5,25 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Route Planner</title>
+<title>Route</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
   --sky-top: #0a1628;
   --sky-bot: #1a3a6b;
-  --glass: rgba(255,255,255,0.12);
-  --glass-border: rgba(255,255,255,0.22);
-  --glass-hover: rgba(255,255,255,0.18);
+  --glass: rgba(255,255,255,0.10);
+  --glass-border: rgba(255,255,255,0.18);
   --blue: #3b82f6;
   --green: #22c55e;
-  --amber: #f59e0b;
   --red: #ef4444;
-  --white: #ffffff;
-  --muted: rgba(255,255,255,0.45);
-  --radius: 18px;
+  --amber: #f59e0b;
+  --radius: 16px;
 }
 
 body {
@@ -34,1297 +29,633 @@ body {
   overflow-x: hidden;
 }
 
-/* ── CLOUD LAYER ── */
 .clouds-layer {
   position: fixed; top:0; left:0; width:100%; height:100%;
-  pointer-events:none; z-index:0; overflow:hidden; opacity:0.5;
+  pointer-events:none; z-index:0; overflow:hidden; opacity:0.45;
 }
 .clouds-layer::before {
-  content:""; position:absolute; top:12%; left:-20%;
-  width:300px; height:90px; background:rgba(255,255,255,0.3);
-  border-radius:50%; filter:blur(22px);
-  animation: driftCloud 60s linear infinite;
+  content:""; position:absolute; top:10%; left:-20%;
+  width:320px; height:90px; background:rgba(255,255,255,0.25);
+  border-radius:50%; filter:blur(24px);
+  animation: drift 65s linear infinite;
 }
 .clouds-layer::after {
-  content:""; position:absolute; bottom:20%; left:-300px;
-  width:420px; height:120px; background:rgba(255,255,255,0.2);
+  content:""; position:absolute; bottom:22%; left:-300px;
+  width:440px; height:110px; background:rgba(255,255,255,0.18);
   border-radius:50%; filter:blur(32px);
-  animation: driftCloud 80s linear infinite; animation-delay:-30s;
+  animation: drift 85s linear infinite; animation-delay:-35s;
 }
-@keyframes driftCloud {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(120vw); }
-}
+@keyframes drift { 0%{transform:translateX(0)} 100%{transform:translateX(120vw)} }
 
-/* ── HEADER ── */
-#app-header {
-  position: fixed; top: 0; left: 0; width: 100%;
-  z-index: 100; padding: 18px 20px 12px;
-  text-align: center; pointer-events: none;
-  background: linear-gradient(to bottom, rgba(10,22,40,0.8) 0%, transparent 100%);
-}
-#app-header h1 {
-  font-size: 2rem; font-weight: 800; letter-spacing: 4px;
-  text-transform: uppercase; text-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-#app-header .subtitle {
-  font-size: 0.75rem; letter-spacing: 2px; opacity: 0.6;
-  text-transform: uppercase; margin-top: 2px;
-}
-
-/* ── MAIN SCROLL AREA ── */
-#main {
+#page {
   position: relative; z-index: 1;
-  padding: 100px 16px 120px;
+  padding: 60px 0 140px;
   max-width: 480px; margin: 0 auto;
 }
 
-/* ── GLASS CARD ── */
-.glass-card {
-  background: var(--glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 14px;
+/* ADDRESS BAR */
+#address-bar {
+  padding: 14px 16px 10px;
+  display: flex; align-items: center; gap: 10px;
 }
-.glass-card h3 {
-  font-size: 0.7rem; letter-spacing: 2.5px; text-transform: uppercase;
-  opacity: 0.6; margin-bottom: 12px;
-}
-
-/* ── INPUTS ── */
-.route-input {
-  width: 100%; padding: 13px 16px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px; color: white;
+#address-input {
+  flex: 1; padding: 12px 16px;
+  background: rgba(255,255,255,0.10);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 14px; color: white;
   font-size: 15px; font-weight: 600;
   outline: none; font-family: inherit;
+  transition: all 0.25s;
 }
-.route-input::placeholder { color: rgba(255,255,255,0.4); font-weight: 400; }
-.route-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.15); }
-
-/* ── BUTTONS ── */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  border: none; border-radius: 12px; cursor: pointer;
-  font-family: inherit; font-weight: 700; font-size: 14px;
-  transition: transform 0.15s, opacity 0.15s;
-  padding: 12px 20px;
+#address-input::placeholder { color: rgba(255,255,255,0.38); font-weight: 400; }
+#address-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.15); }
+#address-input.locked {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.7);
+  pointer-events: none;
 }
-.btn:active { transform: scale(0.95); }
-.btn-blue   { background: var(--blue); color: white; }
-.btn-green  { background: var(--green); color: white; }
-.btn-ghost  { background: rgba(255,255,255,0.12); color: white; border: 1px solid var(--glass-border); }
-.btn-sm     { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
-.btn-full   { width: 100%; }
-.btn-icon   { width: 44px; height: 44px; border-radius: 50%; padding: 0; font-size: 18px; }
-
-/* ── DAY TOGGLES ── */
-.day-toggles { display: flex; gap: 8px; flex-wrap: wrap; }
-.day-toggle {
-  flex: 1; min-width: 44px; padding: 10px 6px;
-  text-align: center; border-radius: 10px; cursor: pointer;
-  border: 1.5px solid var(--glass-border);
-  background: rgba(255,255,255,0.08);
-  font-weight: 700; font-size: 13px; letter-spacing: 0.5px;
-  transition: all 0.2s; user-select: none;
-}
-.day-toggle.active {
-  background: var(--blue); border-color: var(--blue);
-  box-shadow: 0 0 16px rgba(59,130,246,0.4);
-}
-
-/* ── GENERATE BUTTON ── */
-#generate-btn {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white; border: none; border-radius: 14px;
-  padding: 16px; width: 100%; font-size: 16px; font-weight: 700;
-  letter-spacing: 1px; text-transform: uppercase;
-  cursor: pointer; margin-top: 4px;
-  box-shadow: 0 4px 20px rgba(37,99,235,0.5);
-  transition: transform 0.15s, box-shadow 0.15s;
-  font-family: inherit;
-}
-#generate-btn:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(37,99,235,0.3); }
-#generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* ── STATUS MESSAGE ── */
-#status-msg {
-  text-align: center; font-size: 13px; opacity: 0.7;
-  padding: 10px 0; min-height: 36px; letter-spacing: 0.5px;
-}
-
-/* ── LIVE VIEW (3-item) ── */
-#live-view { display: none; }
-
-.stop-ghost {
-  opacity: 0.28;
-  transform: scale(0.93);
-  transform-origin: center top;
-  transition: all 0.4s ease;
-  margin-bottom: 8px;
-  filter: blur(0.5px);
-}
-.stop-current {
-  background: rgba(255,255,255,0.18);
-  border: 1.5px solid rgba(255,255,255,0.5);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 8px;
-  box-shadow: 0 0 30px rgba(255,255,255,0.08);
-  animation: pulseCard 3s ease-in-out infinite;
-}
-@keyframes pulseCard {
-  0%,100% { box-shadow: 0 0 20px rgba(59,130,246,0.2); }
-  50%      { box-shadow: 0 0 40px rgba(59,130,246,0.45); }
-}
-.stop-next {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 20px;
-}
-
-.stop-label {
-  font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
-  opacity: 0.55; margin-bottom: 6px;
-}
-.stop-name {
-  font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
-  line-height: 1.1; text-transform: uppercase;
-}
-.stop-address {
-  font-size: 0.85rem; opacity: 0.65; margin-top: 4px;
-  font-weight: 400;
-}
-.stop-meta {
-  display: flex; align-items: center; gap: 8px; margin-top: 10px;
-}
-.stop-badge {
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
-  padding: 3px 10px; border-radius: 20px; text-transform: uppercase;
-}
-.badge-green  { background: rgba(34,197,94,0.25); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
-.badge-amber  { background: rgba(245,158,11,0.25); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
-.badge-blue   { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
-
-#navigate-btn {
-  width: 100%; padding: 16px;
-  background: linear-gradient(135deg, #16a34a, #15803d);
-  border: none; border-radius: 13px;
-  color: white; font-size: 17px; font-weight: 800;
-  letter-spacing: 1px; text-transform: uppercase;
-  cursor: pointer; margin-top: 14px;
-  box-shadow: 0 4px 20px rgba(22,163,74,0.4);
-  font-family: inherit;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+#save-btn {
+  padding: 12px 20px; border-radius: 14px; border: none;
+  background: var(--blue); color: white;
+  font-weight: 700; font-size: 14px; cursor: pointer;
+  font-family: inherit; flex-shrink: 0;
   transition: transform 0.15s;
 }
-#navigate-btn:active { transform: scale(0.97); }
-
-/* ── DAY SECTION ── */
-.day-section { margin-bottom: 16px; }
-.day-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; cursor: pointer;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px; margin-bottom: 8px;
-  transition: background 0.2s;
+#save-btn:active { transform: scale(0.93); }
+#save-btn.hidden { display: none; }
+#change-btn {
+  width: 42px; height: 42px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white; font-size: 20px; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: transform 0.35s ease;
 }
-.day-header:hover { background: rgba(255,255,255,0.12); }
-.day-header-left { display: flex; align-items: center; gap: 12px; }
-.day-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
-.day-dot.today { background: var(--green); box-shadow: 0 0 10px rgba(34,197,94,0.6); }
-.day-title { font-weight: 800; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; }
-.day-count { font-size: 0.75rem; opacity: 0.55; }
-.day-chevron { font-size: 12px; opacity: 0.5; transition: transform 0.2s; }
-.day-chevron.open { transform: rotate(180deg); }
-.day-body { display: none; }
-.day-body.open { display: block; }
+#change-btn.visible { display: flex; }
+#change-btn:active { transform: rotate(180deg); }
 
-/* ── STOP ROW ── */
-.stop-row {
+#status-line {
+  text-align: center; font-size: 12px;
+  color: rgba(255,255,255,0.45); letter-spacing: 0.5px;
+  padding: 2px 16px 10px; min-height: 22px;
+}
+
+/* CLIENT LIST */
+#client-list { padding: 0 12px; }
+
+/* CLIENT ROW */
+.client-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 13px 16px;
+  padding: 15px 14px;
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 13px; margin-bottom: 7px;
-  transition: all 0.25s;
-  touch-action: none;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  transition: opacity 0.3s, background 0.2s;
   position: relative;
+  animation: rowIn 0.3s ease both;
 }
-.stop-row.skipped { opacity: 0.35; }
-.stop-row.cancelled { opacity: 0.2; text-decoration: line-through; }
-.stop-row.current-day-stop {
-  border-color: rgba(59,130,246,0.5);
-  background: rgba(59,130,246,0.12);
+@keyframes rowIn {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-.stop-num {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(255,255,255,0.12); border: 1px solid var(--glass-border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; flex-shrink: 0;
-  color: rgba(255,255,255,0.7);
+.client-row.paused { opacity: 0.32; }
+.client-row.highlighted {
+  border-color: rgba(59,130,246,0.65);
+  background: rgba(59,130,246,0.14);
 }
-.stop-num.current-num { background: var(--blue); border-color: var(--blue); color: white; }
-.stop-info { flex: 1; min-width: 0; }
-.stop-row-name { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stop-row-addr { font-size: 0.75rem; opacity: 0.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-.stop-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.stop-action-btn {
+.client-row.dragging { opacity: 0.25; }
+.client-row.drag-over {
+  border-color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.14);
+}
+
+/* collapse animation */
+.client-row.collapsing {
+  overflow: hidden;
+  animation: collapseRow 0.38s ease forwards;
+}
+@keyframes collapseRow {
+  0%   { opacity:1; max-height:70px; margin-bottom:8px; padding-top:15px; padding-bottom:15px; }
+  100% { opacity:0; max-height:0;    margin-bottom:0;   padding-top:0;    padding-bottom:0; border-width:0; }
+}
+
+.drag-handle {
+  color: rgba(255,255,255,0.28); font-size: 18px;
+  cursor: grab; flex-shrink: 0;
+  user-select: none; letter-spacing: -2px; line-height: 1;
+}
+
+.client-name {
+  flex: 1; font-size: 1rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  transition: opacity 0.15s;
+}
+.client-name:active { opacity: 0.55; }
+
+.pause-btn {
   width: 34px; height: 34px; border-radius: 50%;
-  border: 1px solid var(--glass-border);
-  background: rgba(255,255,255,0.08);
-  color: white; font-size: 14px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.45); font-size: 13px;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+  transition: all 0.2s;
 }
-.stop-action-btn:active { transform: scale(0.9); }
-.stop-action-btn.skip-active  { background: rgba(245,158,11,0.3); border-color: var(--amber); }
-.stop-action-btn.cancel-active { background: rgba(239,68,68,0.3); border-color: var(--red); }
-.drag-handle { cursor: grab; opacity: 0.35; font-size: 16px; flex-shrink: 0; }
-.drag-handle:active { cursor: grabbing; }
+.pause-btn.active {
+  background: rgba(245,158,11,0.22);
+  border-color: var(--amber); color: var(--amber);
+}
+.pause-btn:active { transform: scale(0.88); }
 
-/* ── BOTTOM NAV BAR ── */
-#bottom-nav {
+/* EOD DIVIDER */
+.eod-divider {
+  display: flex; align-items: center; gap: 10px;
+  padding: 2px 14px; margin: 2px 0 6px;
+}
+.eod-line { flex:1; height:1px; background:rgba(255,255,255,0.14); }
+.eod-dot {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1.5px solid rgba(255,255,255,0.22);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+}
+.eod-dot-inner {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  transition: all 0.25s;
+}
+.eod-dot:active .eod-dot-inner {
+  background: var(--red);
+  box-shadow: 0 0 12px rgba(239,68,68,0.9);
+}
+.eod-dot.fired .eod-dot-inner {
+  background: var(--red);
+  box-shadow: 0 0 14px rgba(239,68,68,0.85);
+  animation: pulseRed 0.9s ease-in-out 3;
+}
+@keyframes pulseRed {
+  0%,100% { box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+  50%      { box-shadow: 0 0 22px rgba(239,68,68,1); transform:scale(1.2); }
+}
+
+/* ADD NEXT BUTTON */
+#add-next-btn {
+  display: none; margin: 10px 12px 0;
+  width: calc(100% - 24px); padding: 15px;
+  background: rgba(34,197,94,0.12);
+  border: 1.5px dashed rgba(34,197,94,0.4);
+  border-radius: var(--radius);
+  color: rgba(34,197,94,0.85);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s;
+}
+#add-next-btn:active { background: rgba(34,197,94,0.22); }
+
+/* SEARCH BAR */
+#search-bar {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 14px; z-index: 200;
+  width: calc(100% - 96px); max-width: 360px; z-index: 200;
+  display: flex; align-items: center; gap: 0;
+  background: rgba(255,255,255,0.12);
+  border: 1.5px solid rgba(255,255,255,0.26);
+  border-radius: 30px; padding: 8px 8px 8px 18px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
-.nav-fab {
-  width: 56px; height: 56px; border-radius: 50%; border: none;
+#search-input {
+  flex:1; border:none; background:transparent;
+  color:white; font-size:16px; font-weight:600;
+  outline:none; font-family:inherit; caret-color:white;
+}
+#search-input::placeholder { color:rgba(255,255,255,0.35); font-weight:400; }
+#search-clear {
+  width:34px; height:34px; border-radius:50%; border:none;
+  background:rgba(255,255,255,0.13); color:white;
+  font-size:15px; cursor:pointer;
+  display:none; align-items:center; justify-content:center;
+}
+#search-clear.visible { display:flex; }
+
+/* RADAR BUTTON */
+#radar-btn {
+  position: fixed; bottom: 20px; right: 16px;
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white; font-size: 22px; cursor: pointer; z-index: 200;
+  box-shadow: 0 4px 18px rgba(37,99,235,0.55);
   display: flex; align-items: center; justify-content: center;
-  font-size: 22px; color: white; cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s;
 }
-.nav-fab:active { transform: scale(0.92); }
-.fab-home   { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
-.fab-live   { background: linear-gradient(135deg, #16a34a, #15803d); }
-.fab-week   { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
-
-/* ── SETUP SCREEN ── */
-#setup-screen { display: none; }
-#setup-screen.visible { display: block; }
-#route-screen { display: none; }
-#route-screen.visible { display: block; }
-
-/* ── LOADING OVERLAY ── */
-#loading-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(10,22,40,0.85);
-  backdrop-filter: blur(8px); z-index: 9999;
-  flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-}
-#loading-overlay.visible { display: flex; }
-.loading-spinner {
-  width: 48px; height: 48px; border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.15);
-  border-top-color: var(--blue);
-  animation: spin 0.8s linear infinite;
-}
+#radar-btn:active { transform: scale(0.88); }
+#radar-btn.spinning { animation: spin 0.9s ease-out; }
 @keyframes spin { to { transform: rotate(360deg); } }
-#loading-text { font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.7; }
-#loading-progress { font-size: 0.75rem; opacity: 0.5; }
 
-/* ── EMPTY STATE ── */
-.empty-state {
-  text-align: center; padding: 40px 20px; opacity: 0.5;
-  font-size: 0.85rem; letter-spacing: 0.5px;
-}
-.empty-state .icon { font-size: 3rem; margin-bottom: 10px; }
-
-/* ── WEEK SUMMARY ── */
-#week-summary-bar {
-  display: flex; gap: 8px; overflow-x: auto;
-  padding-bottom: 4px; margin-bottom: 14px;
-  scrollbar-width: none;
-}
-#week-summary-bar::-webkit-scrollbar { display: none; }
-.week-day-pill {
-  flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
-  border: 1px solid var(--glass-border);
-  background: rgba(255,255,255,0.06);
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
-  text-transform: uppercase; white-space: nowrap;
-  cursor: pointer; transition: all 0.2s;
-}
-.week-day-pill.active-day { background: var(--blue); border-color: var(--blue); }
-.week-day-pill.today-pill { border-color: var(--green); }
-
-/* ── RADAR RINGS (reuse from main app) ── */
+/* RADAR OVERLAY */
 #radar-overlay {
-  position: fixed; top:0; left:0; width:100vw; height:100vh;
-  background: transparent; z-index: 50;
-  display: flex; justify-content: center; align-items: center;
-  pointer-events: none; overflow: hidden;
+  position:fixed; top:0; left:0; width:100vw; height:100vh;
+  pointer-events:none; z-index:50; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
 }
 .radar-ring {
-  position: absolute; border: 3px solid rgba(179,229,252,0.45);
-  border-radius: 50%; opacity: 0;
-  animation: radar-ripple 2.8s ease-out infinite;
+  position:absolute; border:2px solid rgba(179,229,252,0.4);
+  border-radius:50%; opacity:0;
+  animation: ripple 2.8s ease-out infinite;
 }
-.radar-ring:nth-child(2) { animation-delay: 0.9s; }
-.radar-ring:nth-child(3) { animation-delay: 1.8s; }
-@keyframes radar-ripple {
-  0%   { width:0; height:0; opacity:0.8; }
-  60%  { opacity:0.3; }
-  100% { width:200vmax; height:200vmax; opacity:0; }
+.radar-ring:nth-child(2){animation-delay:0.9s}
+.radar-ring:nth-child(3){animation-delay:1.8s}
+@keyframes ripple {
+  0%  {width:0;height:0;opacity:0.8}
+  60% {opacity:0.25}
+  100%{width:200vmax;height:200vmax;opacity:0}
 }
 
-/* ── DRAG GHOST ── */
-.dragging { opacity: 0.4; background: rgba(59,130,246,0.2) !important; }
-.drag-over { border-color: var(--blue) !important; background: rgba(59,130,246,0.15) !important; }
-
-/* ── MISC ── */
-.divider { height: 1px; background: var(--glass-border); margin: 14px 0; }
-.section-title {
-  font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase;
-  opacity: 0.45; margin-bottom: 10px; padding: 0 2px;
+#empty-state {
+  text-align:center; padding:60px 20px;
+  color:rgba(255,255,255,0.32); font-size:14px;
+  letter-spacing:0.5px; display:none; line-height:1.8;
 }
-.inline-row { display: flex; gap: 10px; align-items: center; }
-.flex-1 { flex: 1; }
-
-/* animate in */
-@keyframes fadeUp {
-  from { opacity:0; transform: translateY(16px); }
-  to   { opacity:1; transform: translateY(0); }
-}
-.fade-up { animation: fadeUp 0.35s ease forwards; }
+#empty-state .icon { font-size:2.8rem; margin-bottom:10px; }
 </style>
 </head>
 <body>
 
-<!-- Clouds -->
 <div class="clouds-layer"></div>
-
-<!-- Radar (shown while GPS loading) -->
 <div id="radar-overlay">
   <div class="radar-ring"></div>
   <div class="radar-ring"></div>
   <div class="radar-ring"></div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loading-overlay">
-  <div class="loading-spinner"></div>
-  <div id="loading-text">Building your route</div>
-  <div id="loading-progress"></div>
-</div>
-
-<!-- Header -->
-<div id="app-header">
-  <h1>Route</h1>
-  <div class="subtitle" id="header-subtitle">Landscape Navigator</div>
-</div>
-
-<!-- Main Content -->
-<div id="main">
-
-  <!-- SETUP SCREEN -->
-  <div id="setup-screen">
-    <div class="glass-card fade-up">
-      <h3>Home Base</h3>
-      <input type="text" class="route-input" id="home-address-input"
-        placeholder="Your home address..." autocomplete="off" spellcheck="false">
-      <div style="margin-top:8px; font-size:12px; opacity:0.5; padding:0 2px;">
-        Starting point for Day 1 each week
-      </div>
-    </div>
-
-    <div class="glass-card fade-up" style="animation-delay:0.05s">
-      <h3>Working Days This Week</h3>
-      <div class="day-toggles" id="day-toggles">
-        <div class="day-toggle active" data-day="1">MON</div>
-        <div class="day-toggle active" data-day="2">TUE</div>
-        <div class="day-toggle active" data-day="3">WED</div>
-        <div class="day-toggle active" data-day="4">THU</div>
-        <div class="day-toggle" data-day="5">FRI</div>
-        <div class="day-toggle" data-day="6">SAT</div>
-      </div>
-    </div>
-
-    <div id="status-msg"></div>
-
-    <button id="generate-btn" onclick="generateRoute()">
-      ⚡ Generate Week Route
-    </button>
+<div id="page">
+  <div id="address-bar">
+    <button onclick="window.location.href='index.html'" style="background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.20);border-radius:12px;color:white;font-size:18px;padding:10px 14px;cursor:pointer;flex-shrink:0;">←</button>
+    <input id="address-input" type="text" placeholder="Starting address..." autocomplete="off" spellcheck="false">
+    <button id="save-btn" onclick="saveAddress()">Save</button>
+    <button id="change-btn" onclick="unlockAddress()">↺</button>
   </div>
-
-  <!-- ROUTE SCREEN -->
-  <div id="route-screen">
-
-    <!-- Live View -->
-    <div id="live-view">
-      <!-- ghost stop -->
-      <div class="stop-ghost" id="ghost-stop" style="display:none;">
-        <div class="glass-card" style="margin-bottom:0; padding:14px 18px;">
-          <div class="stop-label">Completed</div>
-          <div class="stop-name" id="ghost-name" style="font-size:1.1rem; opacity:0.5;">—</div>
-          <div class="stop-address" id="ghost-addr">—</div>
-        </div>
-      </div>
-
-      <!-- current stop -->
-      <div class="stop-current" id="current-stop-card">
-        <div class="stop-label">📍 You Are Here</div>
-        <div class="stop-name" id="current-name">—</div>
-        <div class="stop-address" id="current-addr">—</div>
-        <div class="stop-meta">
-          <span class="stop-badge badge-blue" id="current-freq">—</span>
-          <span style="font-size:0.75rem; opacity:0.5;" id="current-stopnum">Stop — of —</span>
-        </div>
-      </div>
-
-      <!-- navigate next -->
-      <div class="stop-next" id="next-stop-card" style="display:none;">
-        <div class="stop-label">Next Up</div>
-        <div class="stop-name" id="next-name" style="font-size:1.15rem;">—</div>
-        <div class="stop-address" id="next-addr">—</div>
-        <button id="navigate-btn" onclick="navigateToNext()">
-          🗺️ Navigate There
-        </button>
-      </div>
-
-      <!-- navigate current (shown when only 1 stop or no next) -->
-      <div id="navigate-current-wrap" style="display:none; margin-top:12px;">
-        <button id="navigate-current-btn" onclick="navigateToCurrent()"
-          style="width:100%;padding:16px;background:linear-gradient(135deg,#16a34a,#15803d);border:none;border-radius:13px;color:white;font-size:17px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(22,163,74,0.4);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;">
-          🗺️ Navigate Here
-        </button>
-      </div>
-
-      <div class="divider" style="margin: 16px 0;"></div>
-      <div class="section-title">Rest of today</div>
-      <div id="today-remaining"></div>
-    </div>
-
-    <!-- Week Overview -->
-    <div id="week-view">
-      <div id="week-summary-bar"></div>
-      <div id="week-days-container"></div>
-    </div>
-
-    <!-- Regenerate -->
-    <div style="margin-top:20px; display:flex; gap:10px;">
-      <button class="btn btn-ghost btn-full" onclick="showSetup()" style="font-size:13px;">
-        ✏️ Edit Setup
-      </button>
-      <button class="btn btn-blue flex-1" onclick="refreshLivePosition()" style="font-size:13px;">
-        📡 Refresh GPS
-      </button>
-    </div>
-  </div>
-
-</div><!-- /main -->
-
-<!-- Bottom Nav -->
-<div id="bottom-nav">
-  <button class="nav-fab fab-home" onclick="showSetup()" title="Setup">🏠</button>
-  <button class="nav-fab fab-live" id="btn-live" onclick="showLiveView()" title="Live Route" style="opacity:0.4;">📍</button>
-  <button class="nav-fab fab-week" id="btn-week" onclick="showWeekView()" title="Week Overview" style="opacity:0.4;">📅</button>
+  <div id="status-line"></div>
+  <div id="client-list"></div>
+  <div id="empty-state"><div class="icon">🌿</div>No clients found.<br>Open from the main app.</div>
+  <button id="add-next-btn" onclick="addNextClient()">＋ Add Next Closest</button>
 </div>
+
+<div id="search-bar">
+  <input id="search-input" type="text" placeholder="Search client..." autocomplete="off" spellcheck="false">
+  <button id="search-clear" onclick="clearSearch()">✕</button>
+</div>
+<button id="radar-btn" onclick="refreshGPS()">📡</button>
 
 <script>
-// ════════════════════════════════════════════
+// ═══════════════════════════
 //  STATE
-// ════════════════════════════════════════════
-let currentClients  = [];
-let oneTimeClients  = [];
-let allClients      = [];
+// ═══════════════════════════
+let allClients   = [];
+let routeList    = [];      // full ordered list of client objects
+let eodIndex     = 0;       // dot sits after routeList[eodIndex] (0 = after first)
+let completedIds = new Set();
+let pausedIds    = new Set();
+let weekDone     = false;
+let homeAddress  = '';
+let homeCoords   = null;
+let geocodeCache = new Map();
 
-let homeBase        = '';
-let workingDays     = [1,2,3,4,5]; // mon-fri default (1=Mon,6=Sat)
-let weekRoute       = [];           // array of day arrays: [[stop,stop],[stop,stop],...]
-let clientOverrides = {};           // { clientId: 'skip'|'cancel' }
-let dailyCountLog   = {};           // { 'Mon': [10,9,10], 'Tue': [8,8] } learned pattern
-let geocodeCache    = new Map();
-let currentDayIndex = 0;           // which day we're currently working (0-based)
-let currentStopIndex= 0;           // detected by GPS or manual
-let userLat = null, userLon = null;
-let gpsWatcher = null;
-let activeView = 'setup'; // 'setup' | 'live' | 'week'
-
-const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat'];
-const DAY_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-// ════════════════════════════════════════════
+// ═══════════════════════════
 //  BOOT
-// ════════════════════════════════════════════
+// ═══════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  loadData();
-  loadSettings();
-  setupDayToggles();
+  loadClients();
+  loadState();
+  setupSearch();
+  stopRadar();
 
-  if (homeBase && weekRoute.length > 0) {
-    document.getElementById('btn-live').style.opacity = '1';
-    document.getElementById('btn-week').style.opacity = '1';
-    showRouteScreen();
-    showLiveView();
-    startGPS();
-  } else {
-    showSetup();
-    stopRadarAnim();
+  if (homeAddress) {
+    lockAddress(homeAddress);
+    if (routeList.length > 0) {
+      render();
+      setStatus('');
+    } else {
+      buildRoute();
+    }
   }
 });
 
-function loadData() {
+// ═══════════════════════════
+//  DATA
+// ═══════════════════════════
+function loadClients() {
   try {
-    const cc = localStorage.getItem('currentClients');
-    const oc = localStorage.getItem('oneTimeClients');
-    currentClients = cc ? JSON.parse(cc) : [];
-    oneTimeClients = oc ? JSON.parse(oc) : [];
-    allClients = [...currentClients, ...oneTimeClients];
-    // restore geocache from clients
+    const cc = JSON.parse(localStorage.getItem('currentClients') || '[]');
+    const oc = JSON.parse(localStorage.getItem('oneTimeClients') || '[]');
+    allClients = [...cc, ...oc];
     allClients.forEach(c => {
-      if (c.gpsLat && c.gpsLon && c.address) {
+      if (c.gpsLat && c.gpsLon && c.address)
         geocodeCache.set(c.address, { lat: parseFloat(c.gpsLat), lon: parseFloat(c.gpsLon) });
-      }
     });
-  } catch(e) {
-    console.warn('loadData error', e);
-  }
+  } catch(e) { allClients = []; }
 }
 
-function loadSettings() {
+function loadState() {
   try {
-    const hb = localStorage.getItem('routeHomeBase');
-    if (hb) {
-      homeBase = hb;
-      document.getElementById('home-address-input').value = hb;
+    homeAddress = localStorage.getItem('rHomeAddress') || '';
+    if (homeAddress) document.getElementById('address-input').value = homeAddress;
+    const hc = localStorage.getItem('rHomeCoords');
+    if (hc) homeCoords = JSON.parse(hc);
+    const s = localStorage.getItem('rState');
+    if (s) {
+      const p = JSON.parse(s);
+      routeList    = p.routeList    || [];
+      eodIndex     = p.eodIndex     ?? 0;
+      completedIds = new Set(p.completedIds || []);
+      pausedIds    = new Set(p.pausedIds    || []);
+      weekDone     = p.weekDone     || false;
     }
-
-    const wd = localStorage.getItem('routeWorkingDays');
-    if (wd) workingDays = JSON.parse(wd);
-
-    const wr = localStorage.getItem('routeWeekRoute');
-    if (wr) weekRoute = JSON.parse(wr);
-
-    const co = localStorage.getItem('routeClientOverrides');
-    if (co) clientOverrides = JSON.parse(co);
-
-    const dcl = localStorage.getItem('routeDailyCountLog');
-    if (dcl) dailyCountLog = JSON.parse(dcl);
-
-    const pos = localStorage.getItem('routeCurrentPosition');
-    if (pos) {
-      const p = JSON.parse(pos);
-      currentDayIndex  = p.day  || 0;
-      currentStopIndex = p.stop || 0;
-    }
-
-    // sync day toggle UI
-    updateDayToggleUI();
-  } catch(e) {
-    console.warn('loadSettings error', e);
-  }
+  } catch(e) {}
 }
 
-function saveSettings() {
-  localStorage.setItem('routeHomeBase',        homeBase);
-  localStorage.setItem('routeWorkingDays',     JSON.stringify(workingDays));
-  localStorage.setItem('routeWeekRoute',       JSON.stringify(weekRoute));
-  localStorage.setItem('routeClientOverrides', JSON.stringify(clientOverrides));
-  localStorage.setItem('routeDailyCountLog',   JSON.stringify(dailyCountLog));
-  localStorage.setItem('routeCurrentPosition', JSON.stringify({ day: currentDayIndex, stop: currentStopIndex }));
+function saveState() {
+  localStorage.setItem('rHomeAddress', homeAddress);
+  if (homeCoords) localStorage.setItem('rHomeCoords', JSON.stringify(homeCoords));
+  localStorage.setItem('rState', JSON.stringify({
+    routeList, eodIndex,
+    completedIds: [...completedIds],
+    pausedIds:    [...pausedIds],
+    weekDone
+  }));
 }
 
-// ════════════════════════════════════════════
-//  SETUP UI
-// ════════════════════════════════════════════
-function setupDayToggles() {
-  document.querySelectorAll('.day-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const d = parseInt(btn.dataset.day);
-      if (workingDays.includes(d)) {
-        if (workingDays.length === 1) return; // keep at least 1
-        workingDays = workingDays.filter(x => x !== d);
-        btn.classList.remove('active');
-      } else {
-        workingDays.push(d);
-        workingDays.sort();
-        btn.classList.add('active');
-      }
-    });
-  });
+// ═══════════════════════════
+//  ADDRESS
+// ═══════════════════════════
+function saveAddress() {
+  const val = document.getElementById('address-input').value.trim();
+  if (!val) { setStatus('Enter an address first'); return; }
+  homeAddress = val;
+  homeCoords  = null; // reset so it re-geocodes
+  lockAddress(val);
+  // Reset route
+  routeList = []; completedIds = new Set(); pausedIds = new Set();
+  eodIndex = 0; weekDone = false;
+  buildRoute();
 }
 
-function updateDayToggleUI() {
-  document.querySelectorAll('.day-toggle').forEach(btn => {
-    const d = parseInt(btn.dataset.day);
-    btn.classList.toggle('active', workingDays.includes(d));
-  });
+function lockAddress(val) {
+  document.getElementById('address-input').value = val;
+  document.getElementById('address-input').classList.add('locked');
+  document.getElementById('save-btn').classList.add('hidden');
+  document.getElementById('change-btn').classList.add('visible');
 }
 
-function showSetup() {
-  activeView = 'setup';
-  document.getElementById('setup-screen').classList.add('visible');
-  document.getElementById('route-screen').classList.remove('visible');
-  document.getElementById('header-subtitle').textContent = 'Landscape Navigator';
-  stopRadarAnim();
+function unlockAddress() {
+  document.getElementById('address-input').classList.remove('locked');
+  document.getElementById('save-btn').classList.remove('hidden');
+  document.getElementById('change-btn').classList.remove('visible');
+  document.getElementById('address-input').focus();
 }
 
-function showRouteScreen() {
-  document.getElementById('setup-screen').classList.remove('visible');
-  document.getElementById('route-screen').classList.add('visible');
-}
-
-function showLiveView() {
-  if (!weekRoute.length) {
-    setStatus('⚠️ Generate a route first.');
-    showSetup();
-    return;
-  }
-  activeView = 'live';
-  showRouteScreen();
-  document.getElementById('live-view').style.display = 'block';
-  document.getElementById('week-view').style.display = 'none';
-  renderLiveView();
-  startGPS();
-}
-
-function showWeekView() {
-  if (!weekRoute.length) {
-    setStatus('⚠️ Generate a route first.');
-    showSetup();
-    return;
-  }
-  activeView = 'week';
-  showRouteScreen();
-  document.getElementById('live-view').style.display = 'none';
-  document.getElementById('week-view').style.display = 'block';
-  renderWeekView();
-}
-
-// ════════════════════════════════════════════
-//  GEOCODING (Photon + Nominatim fallback)
-// ════════════════════════════════════════════
-async function geocodeAddress(address) {
+// ═══════════════════════════
+//  GEOCODING
+// ═══════════════════════════
+async function geocode(address) {
   if (!address) return null;
   if (geocodeCache.has(address)) return geocodeCache.get(address);
-
-  // Photon first
   try {
     const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1&lang=en`);
     if (r.ok) {
       const d = await r.json();
       if (d.features?.length) {
         const [lon, lat] = d.features[0].geometry.coordinates;
-        const coords = { lat: parseFloat(lat), lon: parseFloat(lon) };
-        geocodeCache.set(address, coords);
-        return coords;
+        const c = { lat: parseFloat(lat), lon: parseFloat(lon) };
+        geocodeCache.set(address, c); return c;
       }
     }
   } catch(e) {}
-
-  // Nominatim fallback
   await new Promise(r => setTimeout(r, 1100));
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=us&limit=1&email=routeplanner@example.com`);
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=us&limit=1&email=route@example.com`);
     if (r.ok) {
       const d = await r.json();
       if (d?.length) {
-        const coords = { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
-        geocodeCache.set(address, coords);
-        return coords;
+        const c = { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
+        geocodeCache.set(address, c); return c;
       }
     }
   } catch(e) {}
-
   return null;
 }
 
-function calcDist(lat1, lon1, lat2, lon2) {
-  const R = 6371e3;
-  const f1 = lat1 * Math.PI/180, f2 = lat2 * Math.PI/180;
-  const df = (lat2-lat1)*Math.PI/180, dl = (lon2-lon1)*Math.PI/180;
-  const a = Math.sin(df/2)**2 + Math.cos(f1)*Math.cos(f2)*Math.sin(dl/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function dist(lat1,lon1,lat2,lon2){
+  const R=6371e3, f1=lat1*Math.PI/180, f2=lat2*Math.PI/180,
+        df=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180,
+        a=Math.sin(df/2)**2+Math.cos(f1)*Math.cos(f2)*Math.sin(dl/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-// ════════════════════════════════════════════
-//  WHICH CLIENTS ARE DUE THIS WEEK
-// ════════════════════════════════════════════
-function getClientsDueThisWeek() {
-  // Simple rule: include ALL clients unless explicitly cancelled this week.
-  // The driver decides who to skip — the app should never hide a client automatically.
-  const seen = new Set();
-  return allClients.filter(c => {
-    if (clientOverrides[c.id] === 'cancel') return false;
-    if (seen.has(c.id)) return false;
-    seen.add(c.id);
-    return true;
-  });
-}
+// ═══════════════════════════
+//  BUILD ROUTE
+// ═══════════════════════════
+async function buildRoute() {
+  loadClients();
 
-function parseDateFromEntry(dateStr) {
-  if (!dateStr) return null;
-  // format: "M 1/16" or "T 3/5"
-  const m = dateStr.match(/(\d+)\/(\d+)/);
-  if (!m) return null;
-  const now = new Date();
-  return new Date(now.getFullYear(), parseInt(m[1])-1, parseInt(m[2]));
-}
-
-// ════════════════════════════════════════════
-//  NEAREST NEIGHBOR ALGORITHM
-// ════════════════════════════════════════════
-function nearestNeighborRoute(startLat, startLon, clientsWithCoords) {
-  const unvisited = [...clientsWithCoords];
-  const route = [];
-  let curLat = startLat, curLon = startLon;
-
-  while (unvisited.length > 0) {
-    let bestIdx = 0, bestDist = Infinity;
-    unvisited.forEach((c, i) => {
-      const d = calcDist(curLat, curLon, c._lat, c._lon);
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
-    });
-    const chosen = unvisited.splice(bestIdx, 1)[0];
-    chosen._distFromPrev = bestDist;
-    route.push(chosen);
-    curLat = chosen._lat;
-    curLon = chosen._lon;
-  }
-  return route;
-}
-
-// Split route into days — learned pattern or even split
-function splitIntoDays(route, days) {
-  // Get learned counts for these days
-  const splitResult = [];
-  const total = route.length;
-  const numDays = days.length;
-
-  // Check if we have learned patterns
-  const learnedCounts = days.map(d => {
-    const key = DAY_NAMES[d-1];
-    const log = dailyCountLog[key] || [];
-    if (log.length < 2) return null; // not enough data
-    return Math.round(log.reduce((a,b) => a+b, 0) / log.length);
-  });
-
-  const hasLearned = learnedCounts.every(c => c !== null);
-  let counts;
-
-  if (hasLearned) {
-    // Use learned counts, scaled to actual total
-    const learnedTotal = learnedCounts.reduce((a,b) => a+b, 0);
-    counts = learnedCounts.map(c => Math.round(c * total / learnedTotal));
-    // fix rounding
-    const diff = total - counts.reduce((a,b) => a+b, 0);
-    counts[0] += diff;
-  } else {
-    // Even split
-    const base = Math.floor(total / numDays);
-    const rem  = total % numDays;
-    counts = days.map((_, i) => base + (i < rem ? 1 : 0));
-  }
-
-  let idx = 0;
-  days.forEach((day, i) => {
-    const slice = route.slice(idx, idx + counts[i]);
-    splitResult.push({ day, clients: slice });
-    idx += counts[i];
-  });
-  return splitResult;
-}
-
-// ════════════════════════════════════════════
-//  GENERATE ROUTE
-// ════════════════════════════════════════════
-async function generateRoute() {
-  const addr = document.getElementById('home-address-input').value.trim();
-  if (!addr) {
-    setStatus('⚠️ Please enter your home address first');
-    return;
-  }
-  if (workingDays.length === 0) {
-    setStatus('⚠️ Select at least one working day');
+  if (!allClients.length) {
+    document.getElementById('empty-state').style.display = 'block';
+    setStatus('');
     return;
   }
 
-  homeBase = addr;
-  saveSettings();
-
-  // reload clients fresh
-  loadData();
-  setStatus(`Loaded ${allClients.length} total clients...`);
-
-  const dueClients = getClientsDueThisWeek();
-  setStatus(`${allClients.length} clients total, ${dueClients.length} due this week...`);
-
-  if (dueClients.length === 0) {
-    setStatus('⚠️ No clients found. Make sure clients are saved in the main app and open both from the same GitHub Pages URL.');
-    return;
+  setStatus('Geocoding home address...');
+  if (!homeCoords) {
+    homeCoords = await geocode(homeAddress);
+    if (!homeCoords) {
+      setStatus('Could not find that address. Try adding city and state.');
+      return;
+    }
+    localStorage.setItem('rHomeCoords', JSON.stringify(homeCoords));
   }
 
-  showLoading('Geocoding home address...', '');
-
-  // Geocode home base
-  let homeCords = null;
-  try {
-    homeCords = await geocodeAddress(addr);
-  } catch(e) {
-    hideLoading();
-    setStatus(`❌ Home geocoding error: ${e.message}`);
-    return;
-  }
-
-  if (!homeCords) {
-    hideLoading();
-    // Still proceed — use a default center point so route still builds
-    setStatus('⚠️ Could not geocode home address. Building route without distance optimization...');
-    homeCords = { lat: 40.7128, lon: -74.0060 }; // NYC fallback
-  }
-
-  updateLoadingText('Geocoding clients...');
-
-  // Geocode all due clients
-  const geocoded = [];
-  for (let i = 0; i < dueClients.length; i++) {
-    const c = dueClients[i];
-    updateLoadingProgress(`${i+1} / ${dueClients.length} — ${c.name}`);
-
-    let coords = null;
-
-    // Use cached coords first
-    if (geocodeCache.has(c.address)) {
-      coords = geocodeCache.get(c.address);
-    } else if (c.gpsLat && c.gpsLon) {
+  const withCoords = [], noCoords = [];
+  for (let i = 0; i < allClients.length; i++) {
+    const c = allClients[i];
+    setStatus(`Locating ${i+1} of ${allClients.length} — ${c.name}`);
+    let coords = geocodeCache.get(c.address) || null;
+    if (!coords && c.gpsLat && c.gpsLon)
       coords = { lat: parseFloat(c.gpsLat), lon: parseFloat(c.gpsLon) };
-      geocodeCache.set(c.address, coords);
-    } else {
-      try {
-        coords = await geocodeAddress(c.address);
-      } catch(e) {
-        coords = null;
-      }
-    }
-
-    // Always include client — use home coords as fallback if geocoding fails
-    const finalCoords = coords || { lat: homeCords.lat + (Math.random()-0.5)*0.01, lon: homeCords.lon + (Math.random()-0.5)*0.01 };
+    if (!coords) coords = await geocode(c.address);
     if (coords) {
-      c.gpsLat = coords.lat;
-      c.gpsLon = coords.lon;
+      c.gpsLat = coords.lat; c.gpsLon = coords.lon;
+      withCoords.push({ ...c, _lat: coords.lat, _lon: coords.lon });
+    } else {
+      noCoords.push({ ...c });
     }
-    geocoded.push({ ...c, _lat: finalCoords.lat, _lon: finalCoords.lon, _noCoords: !coords });
   }
 
-  // Persist geocoded coords back to main app localStorage
-  persistCoordsToMainApp();
-
-  updateLoadingText('Building route...');
-  updateLoadingProgress(`${geocoded.length} clients`);
-
-  // Build full optimized route
-  const optimized = nearestNeighborRoute(homeCords.lat, homeCords.lon, geocoded);
-
-  // Split into days
-  const daysSorted = [...workingDays].sort();
-  const splitDays = splitIntoDays(optimized, daysSorted);
-
-  weekRoute = splitDays;
-  currentDayIndex  = 0;
-  currentStopIndex = 0;
-  saveSettings();
-
-  hideLoading();
-
-  // Activate nav buttons
-  document.getElementById('btn-live').style.opacity = '1';
-  document.getElementById('btn-week').style.opacity = '1';
-  showRouteScreen();
-  showLiveView();
-  startGPS();
-}
-
-function persistCoordsToMainApp() {
-  try {
-    // Write updated coords back so main app benefits from geocoding we did
-    ['currentClients','oneTimeClients'].forEach(key => {
-      const arr = key === 'currentClients' ? currentClients : oneTimeClients;
-      localStorage.setItem(key, JSON.stringify(arr));
-    });
-  } catch(e) {}
-}
-
-// ════════════════════════════════════════════
-//  GPS TRACKING
-// ════════════════════════════════════════════
-function startGPS() {
-  if (!navigator.geolocation) return;
-  stopGPS();
-  gpsWatcher = navigator.geolocation.watchPosition(
-    pos => {
-      userLat = pos.coords.latitude;
-      userLon = pos.coords.longitude;
-      stopRadarAnim();
-      autoDetectCurrentStop();
-    },
-    err => { stopRadarAnim(); console.warn('GPS:', err.message); },
-    { enableHighAccuracy: true, maximumAge: 10000 }
-  );
-}
-
-function stopGPS() {
-  if (gpsWatcher !== null) {
-    navigator.geolocation.clearWatch(gpsWatcher);
-    gpsWatcher = null;
-  }
-}
-
-function refreshLivePosition() {
-  if (!weekRoute.length) return;
-  startGPS();
-  navigator.geolocation.getCurrentPosition(pos => {
-    userLat = pos.coords.latitude;
-    userLon = pos.coords.longitude;
-    stopRadarAnim();
-    autoDetectCurrentStop();
-    renderLiveView();
-  }, null, { enableHighAccuracy: true, timeout: 10000 });
-}
-
-// Detect which stop the user is nearest to on today's route
-function autoDetectCurrentStop() {
-  if (!userLat || !weekRoute.length) return;
-  const today = getTodayDayRoute();
-  if (!today || !today.clients.length) return;
-
-  let bestIdx = currentStopIndex;
-  let bestDist = Infinity;
-
-  today.clients.forEach((c, i) => {
-    if (c._lat && c._lon) {
-      const d = calcDist(userLat, userLon, c._lat, c._lon);
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
-    }
-  });
-
-  // Only update if we're within 300m of a stop (avoid phantom jumps)
-  if (bestDist < 300 && bestIdx !== currentStopIndex) {
-    currentStopIndex = bestIdx;
-    saveSettings();
-    if (activeView === 'live') renderLiveView();
-  }
-}
-
-function getTodayDayRoute() {
-  if (!weekRoute.length) return null;
-  // Try to match today's weekday
-  const todayDay = new Date().getDay(); // 0=Sun,1=Mon...
-  const todayMapped = todayDay === 0 ? 7 : todayDay; // remap Sun to 7
-  const match = weekRoute.find(d => d.day === todayMapped);
-  if (match) {
-    currentDayIndex = weekRoute.indexOf(match);
-    return match;
-  }
-  return weekRoute[currentDayIndex] || weekRoute[0];
-}
-
-// ════════════════════════════════════════════
-//  LIVE VIEW RENDER
-// ════════════════════════════════════════════
-function renderLiveView() {
-  const today = getTodayDayRoute();
-  if (!today || !today.clients.length) {
-    document.getElementById('live-view').innerHTML = '<div class="empty-state"><div class="icon">🌿</div>No stops scheduled for today.</div>';
-    return;
+  // nearest-neighbor chain
+  const pool = [...withCoords];
+  const ordered = [];
+  let cLat = homeCoords.lat, cLon = homeCoords.lon;
+  while (pool.length) {
+    let bi = 0, bd = Infinity;
+    pool.forEach((c,i) => { const d=dist(cLat,cLon,c._lat,c._lon); if(d<bd){bd=d;bi=i;} });
+    const chosen = pool.splice(bi, 1)[0];
+    ordered.push(chosen);
+    cLat = chosen._lat; cLon = chosen._lon;
   }
 
-  const clients = today.clients;
-  const ci = Math.min(currentStopIndex, clients.length - 1);
-
-  // Header subtitle
-  const dayName = DAY_FULL[today.day - 1] || 'Today';
-  document.getElementById('header-subtitle').textContent = `${dayName} · Stop ${ci+1} of ${clients.length}`;
-
-  // Ghost (previous)
-  const ghostDiv  = document.getElementById('ghost-stop');
-  if (ci > 0) {
-    const prev = clients[ci - 1];
-    document.getElementById('ghost-name').textContent = prev.name || '—';
-    document.getElementById('ghost-addr').textContent = prev.address || '—';
-    ghostDiv.style.display = 'block';
-  } else {
-    ghostDiv.style.display = 'none';
-  }
-
-  // Current
-  const cur = clients[ci];
-  document.getElementById('current-name').textContent    = (cur.name || '—').toUpperCase();
-  document.getElementById('current-addr').textContent    = cur.address || '—';
-  document.getElementById('current-stopnum').textContent = `Stop ${ci+1} of ${clients.length}`;
-
-  const freq = cur.frequency || cur.service || 'Client';
-  document.getElementById('current-freq').textContent = freq;
-
-  // Next
-  const nextCard = document.getElementById('next-stop-card');
-  const navCurrentWrap = document.getElementById('navigate-current-wrap');
-
-  if (ci < clients.length - 1) {
-    const next = clients[ci + 1];
-    document.getElementById('next-name').textContent = (next.name || '—').toUpperCase();
-    document.getElementById('next-addr').textContent = next.address || '—';
-    nextCard.style.display = 'block';
-    navCurrentWrap.style.display = 'none';
-  } else {
-    // No next stop — show navigate to current instead
-    nextCard.style.display = 'none';
-    navCurrentWrap.style.display = 'block';
-  }
-
-  // Today's remaining
-  renderTodayRemaining(clients, ci);
+  routeList    = [...ordered, ...noCoords];
+  eodIndex     = 0;
+  completedIds = new Set();
+  pausedIds    = new Set();
+  weekDone     = false;
+  setStatus('');
+  saveState();
+  render();
 }
 
-function renderTodayRemaining(clients, ci) {
-  const container = document.getElementById('today-remaining');
-  const remaining = clients.slice(ci + 2); // skip current and next
-  if (!remaining.length) {
-    container.innerHTML = '<div style="font-size:0.8rem; opacity:0.4; text-align:center; padding:8px 0;">Last stop of the day 🏁</div>';
-    return;
-  }
-  container.innerHTML = remaining.map((c, i) => `
-    <div class="stop-row" style="opacity:0.6;">
-      <div class="stop-num">${ci + 3 + i}</div>
-      <div class="stop-info">
-        <div class="stop-row-name">${c.name || '—'}</div>
-        <div class="stop-row-addr">${c.address || '—'}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ════════════════════════════════════════════
-//  WEEK VIEW RENDER
-// ════════════════════════════════════════════
-function renderWeekView() {
-  const container = document.getElementById('week-days-container');
-  const summaryBar = document.getElementById('week-summary-bar');
-  if (!weekRoute.length) {
-    container.innerHTML = '<div class="empty-state"><div class="icon">📅</div>No route generated yet.</div>';
-    return;
-  }
-
-  const todayDay = new Date().getDay();
-  const todayMapped = todayDay === 0 ? 7 : todayDay;
-
-  // Summary pills
-  summaryBar.innerHTML = weekRoute.map(d => {
-    const name = DAY_NAMES[d.day - 1];
-    const isToday = d.day === todayMapped;
-    return `<div class="week-day-pill ${isToday ? 'today-pill' : ''}" onclick="scrollToDay('day-${d.day}')">
-      ${name} · ${d.clients.length}
-    </div>`;
-  }).join('');
-
-  // Day sections
+// ═══════════════════════════
+//  RENDER
+// ═══════════════════════════
+function render() {
+  const container = document.getElementById('client-list');
+  const emptyEl   = document.getElementById('empty-state');
+  const addBtn    = document.getElementById('add-next-btn');
   container.innerHTML = '';
-  weekRoute.forEach((dayRoute, di) => {
-    const dayName = DAY_FULL[dayRoute.day - 1] || `Day ${di+1}`;
-    const isToday = dayRoute.day === todayMapped;
-    const isOpen  = di === currentDayIndex;
 
-    const section = document.createElement('div');
-    section.className = 'day-section fade-up';
-    section.id = `day-${dayRoute.day}`;
-    section.style.animationDelay = `${di * 0.05}s`;
+  // visible = not collapsed
+  const visible = routeList.filter(c => !completedIds.has(c.id));
 
-    section.innerHTML = `
-      <div class="day-header" onclick="toggleDaySection(this)">
-        <div class="day-header-left">
-          <div class="day-dot ${isToday ? 'today' : ''}"></div>
-          <div>
-            <div class="day-title">${dayName}</div>
-            <div class="day-count">${dayRoute.clients.length} stops</div>
-          </div>
-        </div>
-        <div class="day-chevron ${isOpen ? 'open' : ''}">▼</div>
-      </div>
-      <div class="day-body ${isOpen ? 'open' : ''}" id="day-body-${di}">
-        ${renderDayStops(dayRoute.clients, di)}
-      </div>
-    `;
-    container.appendChild(section);
+  if (!visible.length && !routeList.length) {
+    emptyEl.style.display = 'block'; return;
+  }
+  emptyEl.style.display = 'none';
+
+  // eodIndex in routeList → translate to visible position
+  // dot sits AFTER the (eodIndex+1)th visible client
+  let eodVisPos = 0;
+  for (let i = 0; i <= eodIndex && i < routeList.length; i++) {
+    if (!completedIds.has(routeList[i].id)) eodVisPos++;
+  }
+  // clamp
+  eodVisPos = Math.min(eodVisPos, visible.length);
+
+  visible.forEach((client, vi) => {
+    // Insert EOD divider before this row if vi === eodVisPos
+    if (vi === eodVisPos) container.appendChild(makeEodDivider());
+    const row = makeRow(client, vi);
+    container.appendChild(row);
   });
 
+  // If eodVisPos >= visible.length, dot goes at the very end
+  if (eodVisPos >= visible.length) container.appendChild(makeEodDivider());
+
+  addBtn.style.display = weekDone ? 'block' : 'none';
   setupDragAndDrop();
 }
 
-function renderDayStops(clients, di) {
-  if (!clients.length) return '<div class="empty-state" style="padding:20px;">No stops</div>';
-  return clients.map((c, si) => {
-    const override = clientOverrides[c.id] || '';
-    const isSkip   = override === 'skip';
-    const isCancel = override === 'cancel';
-    const isCurrent = di === currentDayIndex && si === currentStopIndex;
+function makeRow(client, vi) {
+  const row = document.createElement('div');
+  row.className = 'client-row' + (pausedIds.has(client.id) ? ' paused' : '');
+  row.dataset.id = client.id;
+  row.style.animationDelay = `${Math.min(vi,12) * 0.04}s`;
 
-    return `
-      <div class="stop-row ${isSkip ? 'skipped' : ''} ${isCancel ? 'cancelled' : ''} ${isCurrent ? 'current-day-stop' : ''}"
-           data-di="${di}" data-si="${si}" data-id="${c.id}" draggable="true">
-        <div class="drag-handle">⠿</div>
-        <div class="stop-num ${isCurrent ? 'current-num' : ''}">${si + 1}</div>
-        <div class="stop-info">
-          <div class="stop-row-name">${c.name || '—'}</div>
-          <div class="stop-row-addr">${c.address || '—'}</div>
-        </div>
-        <div class="stop-actions">
-          <button class="stop-action-btn ${isSkip ? 'skip-active' : ''}"
-            onclick="toggleOverride('${c.id}', 'skip', ${di})" title="Postpone">⏸</button>
-          <button class="stop-action-btn ${isCancel ? 'cancel-active' : ''}"
-            onclick="toggleOverride('${c.id}', 'cancel', ${di})" title="Cancel">✕</button>
-        </div>
-      </div>
-    `;
-  }).join('');
+  const handle = document.createElement('div');
+  handle.className = 'drag-handle';
+  handle.textContent = '⠿';
+
+  const name = document.createElement('div');
+  name.className = 'client-name';
+  name.textContent = client.name || '—';
+  name.addEventListener('click', () => navigateTo(client));
+
+  const pauseBtn = document.createElement('button');
+  pauseBtn.className = 'pause-btn' + (pausedIds.has(client.id) ? ' active' : '');
+  pauseBtn.textContent = '⏸';
+  pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(client.id); });
+
+  row.appendChild(handle);
+  row.appendChild(name);
+  row.appendChild(pauseBtn);
+  return row;
 }
 
-function toggleDaySection(headerEl) {
-  const chevron = headerEl.querySelector('.day-chevron');
-  const di = headerEl.closest('.day-section').id.split('-')[1]; // day number
-  const bodyId = headerEl.nextElementSibling.id;
-  const body = document.getElementById(bodyId);
-  if (!body) return;
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  chevron.classList.toggle('open', !isOpen);
+function makeEodDivider() {
+  const wrap = document.createElement('div');
+  wrap.className = 'eod-divider';
+  wrap.id = 'eod-divider';
+
+  const l = document.createElement('div'); l.className = 'eod-line';
+  const r = document.createElement('div'); r.className = 'eod-line';
+
+  const dot = document.createElement('div');
+  dot.className = 'eod-dot';
+  const inner = document.createElement('div');
+  inner.className = 'eod-dot-inner';
+  dot.appendChild(inner);
+  dot.addEventListener('click', pressEodDot);
+
+  wrap.appendChild(l); wrap.appendChild(dot); wrap.appendChild(r);
+  return wrap;
 }
 
-function scrollToDay(id) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+// ═══════════════════════════
+//  EOD DOT
+// ═══════════════════════════
+function pressEodDot() {
+  const dot = document.querySelector('#eod-divider .eod-dot');
+  if (dot) { dot.classList.add('fired'); setTimeout(() => dot.classList.remove('fired'), 2800); }
 
-// ════════════════════════════════════════════
-//  OVERRIDES (skip / cancel)
-// ════════════════════════════════════════════
-function toggleOverride(clientId, type, dayIdx) {
-  const current = clientOverrides[clientId];
-  if (current === type) {
-    delete clientOverrides[clientId]; // toggle off
-  } else {
-    clientOverrides[clientId] = type;
-    // If cancelled, remove from route and push skip to next day
-    if (type === 'skip') {
-      pushSkippedToNextDay(clientId, parseInt(dayIdx));
-    }
+  // Collect visible clients ABOVE the divider
+  const visible = routeList.filter(c => !completedIds.has(c.id));
+  let eodVisPos = 0;
+  for (let i = 0; i <= eodIndex && i < routeList.length; i++) {
+    if (!completedIds.has(routeList[i].id)) eodVisPos++;
   }
-  saveSettings();
-  renderWeekView();
-  if (activeView === 'live') renderLiveView();
-}
+  eodVisPos = Math.min(eodVisPos, visible.length);
+  const toCollapse = visible.slice(0, eodVisPos);
+  if (!toCollapse.length) return;
 
-function pushSkippedToNextDay(clientId, fromDayIdx) {
-  if (fromDayIdx >= weekRoute.length - 1) return; // no next day
-  const client = weekRoute[fromDayIdx].clients.find(c => c.id === clientId);
-  if (!client) return;
-  // Remove from current day
-  weekRoute[fromDayIdx].clients = weekRoute[fromDayIdx].clients.filter(c => c.id !== clientId);
-  // Add to next day at a sensible position (nearest neighbor from last stop of that day)
-  weekRoute[fromDayIdx + 1].clients.push(client);
-  // clear the skip override since we've moved it
-  delete clientOverrides[clientId];
-  saveSettings();
-}
-
-// ════════════════════════════════════════════
-//  DRAG & DROP REORDER
-// ════════════════════════════════════════════
-function setupDragAndDrop() {
-  let dragSrc = null;
-
-  document.querySelectorAll('.stop-row[draggable="true"]').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      dragSrc = row;
-      row.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    row.addEventListener('dragend', () => {
-      row.classList.remove('dragging');
-      document.querySelectorAll('.stop-row').forEach(r => r.classList.remove('drag-over'));
-    });
-    row.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (row !== dragSrc) row.classList.add('drag-over');
-    });
-    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-    row.addEventListener('drop', e => {
-      e.preventDefault();
-      if (!dragSrc || dragSrc === row) return;
-      const srcDi = parseInt(dragSrc.dataset.di);
-      const srcSi = parseInt(dragSrc.dataset.si);
-      const tgtDi = parseInt(row.dataset.di);
-      const tgtSi = parseInt(row.dataset.si);
-      if (srcDi !== tgtDi) return; // cross-day drag not supported (keep simple)
-      const day = weekRoute[srcDi];
-      const [moved] = day.clients.splice(srcSi, 1);
-      day.clients.splice(tgtSi, 0, moved);
-      saveSettings();
-      renderWeekView();
-    });
+  // Animate rows out
+  toCollapse.forEach(client => {
+    const row = document.querySelector(`.client-row[data-id="${client.id}"]`);
+    if (row) {
+      row.classList.add('collapsing');
+      setTimeout(() => completedIds.add(client.id), 380);
+    }
   });
 
-  // Touch drag (mobile)
-  setupTouchDrag();
+  setTimeout(() => {
+    // Advance eodIndex to the next non-completed client in routeList
+    const nextVisible = routeList.findIndex((c, i) => !completedIds.has(c.id));
+    eodIndex = nextVisible === -1 ? routeList.length - 1 : nextVisible;
+
+    // Check if all done
+    const remaining = routeList.filter(c => !completedIds.has(c.id) && !pausedIds.has(c.id));
+    if (!remaining.length) weekDone = true;
+
+    saveState();
+    render();
+  }, 420);
 }
 
-function setupTouchDrag() {
-  let dragEl = null, dragDi, dragSi, ghost = null;
-
-  document.querySelectorAll('.drag-handle').forEach(handle => {
-    handle.addEventListener('touchstart', e => {
-      const row = handle.closest('.stop-row');
-      dragEl = row;
-      dragDi = parseInt(row.dataset.di);
-      dragSi = parseInt(row.dataset.si);
-
-      ghost = row.cloneNode(true);
-      ghost.style.cssText = `position:fixed;opacity:0.7;pointer-events:none;z-index:9999;width:${row.offsetWidth}px;left:${row.getBoundingClientRect().left}px;top:${row.getBoundingClientRect().top}px;`;
-      document.body.appendChild(ghost);
-      row.classList.add('dragging');
-    }, { passive: true });
-
-    handle.addEventListener('touchmove', e => {
-      if (!ghost) return;
-      const t = e.touches[0];
-      ghost.style.top = (t.clientY - 30) + 'px';
-    }, { passive: true });
-
-    handle.addEventListener('touchend', e => {
-      if (!ghost || !dragEl) return;
-      ghost.remove(); ghost = null;
-      dragEl.classList.remove('dragging');
-
-      const t = e.changedTouches[0];
-      const target = document.elementFromPoint(t.clientX, t.clientY)?.closest('.stop-row');
-      if (target && target !== dragEl) {
-        const tgtDi = parseInt(target.dataset.di);
-        const tgtSi = parseInt(target.dataset.si);
-        if (tgtDi === dragDi) {
-          const day = weekRoute[dragDi];
-          const [moved] = day.clients.splice(dragSi, 1);
-          day.clients.splice(tgtSi, 0, moved);
-          saveSettings();
-          renderWeekView();
-        }
-      }
-      dragEl = null;
-    });
-  });
+// ═══════════════════════════
+//  PAUSE
+// ═══════════════════════════
+function togglePause(id) {
+  if (pausedIds.has(id)) pausedIds.delete(id);
+  else pausedIds.add(id);
+  saveState(); render();
 }
 
-// ════════════════════════════════════════════
-//  NAVIGATION
-// ════════════════════════════════════════════
-function openMapsTo(address) {
-  const addr = encodeURIComponent(address);
+// ═══════════════════════════
+//  NAVIGATE
+// ═══════════════════════════
+function navigateTo(client) {
+  if (!client?.address) return;
+  const addr = encodeURIComponent(client.address);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const url = isIOS
     ? `maps://maps.apple.com/?daddr=${addr}&dirflg=d`
@@ -1332,69 +663,226 @@ function openMapsTo(address) {
   window.open(url, '_blank');
 }
 
-// Navigate to current stop (single stop or last stop of day)
-function navigateToCurrent() {
-  const today = getTodayDayRoute();
-  if (!today) return;
-  const cur = today.clients[currentStopIndex];
-  if (!cur?.address) return;
-  openMapsTo(cur.address);
-}
+// ═══════════════════════════
+//  ADD NEXT CLIENT (new week)
+// ═══════════════════════════
+async function addNextClient() {
+  loadClients();
+  const inRoute = new Set(routeList.map(c => c.id));
+  const candidates = allClients.filter(c => !inRoute.has(c.id));
+  if (!candidates.length) { setStatus('All clients are already in the route.'); return; }
 
-function navigateToNext() {
-  const today = getTodayDayRoute();
-  if (!today) return;
-  const nextIdx = currentStopIndex + 1;
-  if (nextIdx >= today.clients.length) return;
-  const next = today.clients[nextIdx];
-  if (!next?.address) return;
-
-  openMapsTo(next.address);
-
-  // Advance stop index
-  currentStopIndex = nextIdx;
-  saveSettings();
-  recordDailyProgress(today);
-  renderLiveView();
-}
-
-// Record how many stops completed per day for learning
-function recordDailyProgress(today) {
-  const dayName = DAY_NAMES[today.day - 1];
-  if (!dailyCountLog[dayName]) dailyCountLog[dayName] = [];
-  // Update last entry or push
-  const log = dailyCountLog[dayName];
-  if (log.length === 0 || log[log.length-1] < currentStopIndex + 1) {
-    if (log.length > 0) log[log.length-1] = currentStopIndex + 1;
-    else log.push(currentStopIndex + 1);
+  let lastLat = homeCoords?.lat || 0, lastLon = homeCoords?.lon || 0;
+  for (let i = routeList.length - 1; i >= 0; i--) {
+    if (routeList[i]._lat) { lastLat = routeList[i]._lat; lastLon = routeList[i]._lon; break; }
   }
-  // keep last 8 weeks
-  if (log.length > 8) log.shift();
-  saveSettings();
+
+  setStatus('Finding next closest...');
+  let best = null, bestD = Infinity;
+  for (const c of candidates) {
+    let coords = geocodeCache.get(c.address) || null;
+    if (!coords && c.gpsLat && c.gpsLon) coords = { lat: parseFloat(c.gpsLat), lon: parseFloat(c.gpsLon) };
+    if (!coords) coords = await geocode(c.address);
+    if (!coords) continue;
+    const d = dist(lastLat, lastLon, coords.lat, coords.lon);
+    if (d < bestD) { bestD = d; best = { ...c, _lat: coords.lat, _lon: coords.lon }; }
+  }
+
+  if (!best) { setStatus('Could not locate next client.'); return; }
+  routeList.push(best);
+  weekDone = false;
+  setStatus(''); saveState(); render();
 }
 
-// ════════════════════════════════════════════
-//  RADAR / LOADING UI
-// ════════════════════════════════════════════
+// ═══════════════════════════
+//  GPS REFRESH
+// ═══════════════════════════
+function refreshGPS() {
+  const btn = document.getElementById('radar-btn');
+  btn.classList.add('spinning');
+  setTimeout(() => btn.classList.remove('spinning'), 950);
+
+  if (!navigator.geolocation) { setStatus('GPS not available'); return; }
+  setStatus('Getting location...');
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude, lon = pos.coords.longitude;
+    setStatus('Reordering by your position...');
+    reorderFromPosition(lat, lon);
+  }, () => setStatus('Could not get location'),
+  { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function reorderFromPosition(lat, lon) {
+  const remaining = routeList.filter(c => !completedIds.has(c.id) && c._lat && c._lon);
+  const noCoords  = routeList.filter(c => !completedIds.has(c.id) && (!c._lat || !c._lon));
+  if (!remaining.length) { setStatus(''); return; }
+
+  const pool = [...remaining];
+  const ordered = [];
+  let cLat = lat, cLon = lon;
+  while (pool.length) {
+    let bi=0, bd=Infinity;
+    pool.forEach((c,i)=>{ const d=dist(cLat,cLon,c._lat,c._lon); if(d<bd){bd=d;bi=i;} });
+    const chosen = pool.splice(bi,1)[0];
+    ordered.push(chosen); cLat=chosen._lat; cLon=chosen._lon;
+  }
+
+  routeList = [...ordered, ...noCoords];
+  eodIndex = 0;
+  setStatus(''); saveState(); render();
+}
+
+// ═══════════════════════════
+//  DRAG & DROP (touch)
+// ═══════════════════════════
+function setupDragAndDrop() {
+  let dragEl=null, ghost=null, startY=0;
+
+  document.querySelectorAll('.drag-handle').forEach(handle => {
+    handle.addEventListener('touchstart', e => {
+      const row = handle.closest('.client-row');
+      if (!row) return;
+      dragEl = row;
+      startY = e.touches[0].clientY;
+      const rect = row.getBoundingClientRect();
+      ghost = row.cloneNode(true);
+      ghost.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.55;pointer-events:none;z-index:9999;border-radius:16px;background:rgba(255,255,255,0.15);`;
+      document.body.appendChild(ghost);
+      row.classList.add('dragging');
+    }, {passive:true});
+
+    handle.addEventListener('touchmove', e => {
+      if (!ghost) return;
+      e.preventDefault();
+      const dy = e.touches[0].clientY - startY;
+      const rect = dragEl.getBoundingClientRect();
+      ghost.style.top = (rect.top + dy) + 'px';
+    }, {passive:false});
+
+    handle.addEventListener('touchend', e => {
+      if (!ghost || !dragEl) return;
+      ghost.remove(); ghost=null;
+      dragEl.classList.remove('dragging');
+      const touch = e.changedTouches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.client-row');
+      if (target && target !== dragEl) {
+        const fi = routeList.findIndex(c=>c.id===dragEl.dataset.id);
+        const ti = routeList.findIndex(c=>c.id===target.dataset.id);
+        if (fi!==-1 && ti!==-1) {
+          const [m] = routeList.splice(fi,1);
+          routeList.splice(ti,0,m);
+          saveState(); render();
+        }
+      }
+      dragEl=null;
+    });
+  });
+}
+
+// ═══════════════════════════
+//  SEARCH
+// ═══════════════════════════
+function setupSearch() {
+  const input = document.getElementById('search-input');
+  const clearBtn = document.getElementById('search-clear');
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    clearBtn.classList.toggle('visible', q.length > 0);
+    doHighlight(q);
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const q = input.value.trim().toLowerCase();
+      const row = document.querySelector('.client-row.highlighted');
+      if (row) { row.scrollIntoView({behavior:'smooth',block:'center'}); }
+      input.blur();
+    }
+    if (e.key === 'Escape') clearSearch();
+  });
+}
+
+function doHighlight(q) {
+  document.querySelectorAll('.client-row').forEach(row => {
+    if (!q) { row.classList.remove('highlighted'); return; }
+    const id = row.dataset.id;
+    const c  = routeList.find(x => x.id === id);
+    const match = c && (c.name||'').toLowerCase().includes(q.toLowerCase());
+    row.classList.toggle('highlighted', !!match);
+    if (match) row.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  doHighlight('');
+}
+
+// ═══════════════════════════
+//  RADAR
+// ═══════════════════════════
 let radarStopped = false;
-function stopRadarAnim() {
-  if (radarStopped) return;
-  radarStopped = true;
+function stopRadar() {
+  if (radarStopped) return; radarStopped = true;
   const r = document.getElementById('radar-overlay');
   if (r) { r.style.transition='opacity 0.8s'; r.style.opacity='0'; setTimeout(()=>r.style.display='none',800); }
 }
-setTimeout(() => stopRadarAnim(), 8000);
+setTimeout(stopRadar, 5000);
 
-function showLoading(text, progress) {
-  document.getElementById('loading-overlay').classList.add('visible');
-  document.getElementById('loading-text').textContent = text;
-  document.getElementById('loading-progress').textContent = progress;
-}
-function hideLoading() { document.getElementById('loading-overlay').classList.remove('visible'); }
-function updateLoadingText(t) { document.getElementById('loading-text').textContent = t; }
-function updateLoadingProgress(t) { document.getElementById('loading-progress').textContent = t; }
-function setStatus(msg) { document.getElementById('status-msg').textContent = msg; }
+function setStatus(msg) { document.getElementById('status-line').textContent = msg; }
+
+// ═══════════════════════════
+//  SWIPE DOWN → BACK TO MAIN APP
+// ═══════════════════════════
+(function () {
+  let startY = 0, currentY = 0, active = false, arrowEl = null;
+  const THRESHOLD = 90;
+
+  function getArrow() {
+    if (arrowEl) return arrowEl;
+    arrowEl = document.createElement('div');
+    arrowEl.style.cssText = `
+      position:fixed;top:24px;left:50%;transform:translateX(-50%);
+      font-size:28px;z-index:9999;display:none;pointer-events:none;
+      color:rgba(255,255,255,0.85);transition:opacity 0.15s;
+    `;
+    arrowEl.textContent = '↓ Back';
+    document.body.appendChild(arrowEl);
+    return arrowEl;
+  }
+
+  document.addEventListener('touchstart', e => {
+    // Only activate when scrolled to top
+    if (window.scrollY > 10) return;
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    active = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!active) return;
+    currentY = e.touches[0].clientY;
+    const pull = currentY - startY;
+    if (pull > 15) {
+      const arrow = getArrow();
+      arrow.style.display = 'block';
+      arrow.style.opacity = Math.min(pull / THRESHOLD, 1);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!active) return;
+    active = false;
+    const arrow = getArrow();
+    arrow.style.display = 'none';
+    const pull = currentY - startY;
+    if (pull > THRESHOLD) {
+      window.location.href = 'index.html';
+    }
+    startY = 0; currentY = 0;
+  });
+})();
 </script>
-
 </body>
 </html>
