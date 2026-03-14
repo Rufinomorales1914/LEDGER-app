@@ -4617,6 +4617,56 @@
                 }
             }
         })();
-</script>
+        // ===== SWIPE UP → OPEN ROUTE PLANNER =====
+(function () {
+  let startY = 0, currentY = 0, direction = null, arrowEl = null;
+  const THRESHOLD = 80;
+
+  function getArrow() {
+    if (arrowEl) return arrowEl;
+    arrowEl = document.createElement('div');
+    arrowEl.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);font-size:32px;z-index:9998;display:none;pointer-events:none;';
+    arrowEl.textContent = '🗺';
+    document.body.appendChild(arrowEl);
+    return arrowEl;
+  }
+
+  document.addEventListener('touchstart', function (e) {
+    if (document.querySelector('.sheet.active')) return;
+    if (document.getElementById('client-search-overlay')?.classList.contains('open')) return;
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    direction = null;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
+    if (document.querySelector('.sheet.active')) return;
+    if (document.getElementById('client-search-overlay')?.classList.contains('open')) return;
+    currentY = e.touches[0].clientY;
+    const dy = currentY - startY;
+    if (direction === null && Math.abs(dy) > 8) {
+      direction = dy < 0 ? 'up' : 'down';
+    }
+    if (direction === 'up') {
+      const pull = startY - currentY;
+      const arrow = getArrow();
+      arrow.style.display = pull > 15 ? 'block' : 'none';
+      arrow.style.opacity = Math.min(pull / THRESHOLD, 1);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function () {
+    const arrow = getArrow();
+    arrow.style.display = 'none';
+    const pull = startY - currentY;
+    if (direction === 'up' && pull > THRESHOLD) {
+      if (!document.querySelector('.sheet.active')) {
+        window.location.href = 'route.html';
+      }
+    }
+    startY = 0; currentY = 0; direction = null;
+  });
+})();
+    </script>
 </body>
 </html>
