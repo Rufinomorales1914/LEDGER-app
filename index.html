@@ -4617,16 +4617,17 @@
                 }
             }
         })();
-        // ===== SWIPE UP → OPEN ROUTE PLANNER =====
+        // ===== SWIPE LEFT TO RIGHT → OPEN ROUTE PLANNER =====
 (function () {
-  let startY = 0, currentY = 0, direction = null, arrowEl = null;
+  let startX = 0, startY = 0, currentX = 0, active = false, arrowEl = null;
   const THRESHOLD = 80;
+  const EDGE = 30; // must start within 30px of left edge
 
   function getArrow() {
     if (arrowEl) return arrowEl;
     arrowEl = document.createElement('div');
-    arrowEl.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);font-size:32px;z-index:9998;display:none;pointer-events:none;';
-    arrowEl.textContent = '🗺';
+    arrowEl.style.cssText = 'position:fixed;top:50%;left:20px;transform:translateY(-50%);font-size:28px;z-index:9998;display:none;pointer-events:none;color:rgba(255,255,255,0.85);';
+    arrowEl.textContent = '🗺 →';
     document.body.appendChild(arrowEl);
     return arrowEl;
   }
@@ -4634,37 +4635,40 @@
   document.addEventListener('touchstart', function (e) {
     if (document.querySelector('.sheet.active')) return;
     if (document.getElementById('client-search-overlay')?.classList.contains('open')) return;
-    startY = e.touches[0].clientY;
-    currentY = startY;
-    direction = null;
+    const touch = e.touches[0];
+    if (touch.clientX > EDGE) return; // must start from left edge
+    startX = touch.clientX;
+    startY = touch.clientY;
+    currentX = startX;
+    active = true;
   }, { passive: true });
 
   document.addEventListener('touchmove', function (e) {
-    if (document.querySelector('.sheet.active')) return;
-    if (document.getElementById('client-search-overlay')?.classList.contains('open')) return;
-    currentY = e.touches[0].clientY;
-    const dy = currentY - startY;
-    if (direction === null && Math.abs(dy) > 8) {
-      direction = dy < 0 ? 'up' : 'down';
-    }
-    if (direction === 'up') {
-      const pull = startY - currentY;
+    if (!active) return;
+    const touch = e.touches[0];
+    currentX = touch.clientX;
+    const dx = currentX - startX;
+    const dy = Math.abs(touch.clientY - startY);
+    if (dy > 40) { active = false; return; } // cancel if too vertical
+    if (dx > 15) {
       const arrow = getArrow();
-      arrow.style.display = pull > 15 ? 'block' : 'none';
-      arrow.style.opacity = Math.min(pull / THRESHOLD, 1);
+      arrow.style.display = 'block';
+      arrow.style.opacity = Math.min(dx / THRESHOLD, 1);
     }
   }, { passive: true });
 
   document.addEventListener('touchend', function () {
+    if (!active) return;
+    active = false;
     const arrow = getArrow();
     arrow.style.display = 'none';
-    const pull = startY - currentY;
-    if (direction === 'up' && pull > THRESHOLD) {
+    const dx = currentX - startX;
+    if (dx > THRESHOLD) {
       if (!document.querySelector('.sheet.active')) {
         window.location.href = 'route.html';
       }
     }
-    startY = 0; currentY = 0; direction = null;
+    startX = 0; startY = 0; currentX = 0;
   });
 })();
     </script>
